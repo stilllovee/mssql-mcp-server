@@ -25,7 +25,7 @@ Add to your Claude Desktop configuration:
     "mcpServers": {
         "mssql": {
             "command": "node",
-            "args": ["/path/to/mssql-mcpserver-develop/index.js"],
+            "args": ["/path/to/project"],
             "env": {
                 "DB_SERVER": "localhost",
                 "DB_DATABASE": "x4",
@@ -44,7 +44,7 @@ Or using a connection string:
     "mcpServers": {
         "mssql": {
             "command": "node",
-            "args": ["/path/to/mssql-mcpserver-develop/index.js"],
+            "args": ["/path/to/project"],
             "env": {
                 "DB_CONNECTION_STRING": "Server=localhost;Database=x4;Trusted_Connection=yes;TrustServerCertificate=yes"
             }
@@ -60,7 +60,7 @@ Or run directly with npx:
     "mcpServers": {
         "mssql": {
             "command": "npx",
-            "args": ["github:stilllovee/mssql-mcpserver"],
+            "args": ["github:stilllovee/mssql-mcp-server"],
             "env": {
                 "DB_SERVER": "localhost",
                 "DB_DATABASE": "x4",
