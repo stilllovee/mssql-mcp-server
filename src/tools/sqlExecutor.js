@@ -1,6 +1,6 @@
 
 let sql
-var config = process.env.DB_CONNECTION_STRING;
+const connectionString = process.env.DB_CONNECTION_STRING;
 function parseConnectionString(connectionString) {
   const params = {};
   const pairs = connectionString.split(';');
@@ -38,7 +38,7 @@ function parseConnectionString(connectionString) {
     }
   };
 }
-const parsedConfig = parseConnectionString(config);
+const parsedConfig = parseConnectionString(connectionString);
 
 if (parsedConfig.server === "localhost") {
   sql = require('mssql/msnodesqlv8')
@@ -53,8 +53,6 @@ class SQLExecutor {
     console.log("🚀 ~ SQLExecutor ~ constructor ~ config:", config)
     // If config is a string, treat it as a connection string
     if (typeof config === 'string') {
-      const parsedConfig = this.parseConnectionString(config);
-      console.log("🚀 ~ SQLExecutor ~ constructor ~ parsedConfig:", parsedConfig)
       if (parsedConfig.server === "localhost") {
         this.config = {
           connectionString: config
@@ -77,54 +75,12 @@ class SQLExecutor {
   }
 
   /**
-   * Parse connection string into config object for Tedious driver
-   */
-  parseConnectionString(connectionString) {
-    const params = {};
-    const pairs = connectionString.split(';');
-
-    for (const pair of pairs) {
-      const [key, value] = pair.split('=').map(s => s.trim());
-      if (key && value) {
-        params[key.toLowerCase()] = value;
-      }
-    }
-
-    // Extract server and port
-    let server = params['server'] || 'localhost';
-    let port = 1433;
-
-    if (server.startsWith('tcp:')) {
-      server = server.substring(4);
-    }
-
-    if (server.includes(',')) {
-      [server, port] = server.split(',');
-      port = parseInt(port);
-    }
-
-    return {
-      server: server,
-      port: port,
-      database: params['database'] || params['initial catalog'],
-      user: params['user id'] || params['uid'],
-      password: params['password'] || params['pwd'],
-      options: {
-        encrypt: true,
-        trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
-        enableArithAbort: true
-      }
-    };
-  }
-
-  /**
    * Build database configuration from environment variables
    */
   buildConfigFromEnv() {
     // Check if a full connection string is provided
     console.log("🚀 ~ SQLExecutor ~ buildConfigFromEnv ~ process.env.DB_CONNECTION_STRING:", process.env.DB_CONNECTION_STRING)
     if (process.env.DB_CONNECTION_STRING) {
-      let parsedConfig = this.parseConnectionString(process.env.DB_CONNECTION_STRING);
       console.log("🚀 ~ SQLExecutor ~ buildConfigFromEnv ~ parsedConfig:", parsedConfig)
       if (parsedConfig.server === "localhost") {
         return {
