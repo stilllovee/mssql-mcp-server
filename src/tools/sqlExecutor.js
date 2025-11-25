@@ -2,376 +2,376 @@
 let sql
 const connectionString = process.env.DB_CONNECTION_STRING;
 function parseConnectionString(connectionString) {
-  const params = {};
-  const pairs = connectionString.split(';');
+	const params = {};
+	const pairs = connectionString.split(';');
 
-  for (const pair of pairs) {
-    const [key, value] = pair.split('=').map(s => s.trim());
-    if (key && value) {
-      params[key.toLowerCase()] = value;
-    }
-  }
+	for (const pair of pairs) {
+		const [key, value] = pair.split('=').map(s => s.trim());
+		if (key && value) {
+			params[key.toLowerCase()] = value;
+		}
+	}
 
-  // Extract server and port
-  let server = params['server'] || 'localhost';
-  let port = 1433;
+	// Extract server and port
+	let server = params['server'] || 'localhost';
+	let port = 1433;
 
-  if (server.startsWith('tcp:')) {
-    server = server.substring(4);
-  }
+	if (server.startsWith('tcp:')) {
+		server = server.substring(4);
+	}
 
-  if (server.includes(',')) {
-    [server, port] = server.split(',');
-    port = parseInt(port);
-  }
+	if (server.includes(',')) {
+		[server, port] = server.split(',');
+		port = parseInt(port);
+	}
 
-  return {
-    server: server,
-    port: port,
-    database: params['database'] || params['initial catalog'],
-    user: params['user id'] || params['uid'],
-    password: params['password'] || params['pwd'],
-    options: {
-      encrypt: true,
-      trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
-      enableArithAbort: true
-    }
-  };
+	return {
+		server: server,
+		port: port,
+		database: params['database'] || params['initial catalog'],
+		user: params['user id'] || params['uid'],
+		password: params['password'] || params['pwd'],
+		options: {
+			encrypt: true,
+			trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
+			enableArithAbort: true
+		}
+	};
 }
 const parsedConfig = parseConnectionString(connectionString);
 
 if (parsedConfig.server === "localhost") {
-  sql = require('mssql/msnodesqlv8')
+	sql = require('mssql/msnodesqlv8')
 } else {
-  sql = require('mssql')
+	sql = require('mssql')
 }
 /**
  * SQL Server executor functionality
  */
 class SQLExecutor {
-  constructor(config = null) {
-    // If config is a string, treat it as a connection string
-    if (typeof config === 'string') {
-      if (parsedConfig.server === "localhost") {
-        this.config = {
-          connectionString: config
-        }
-      } else {
-        this.config = parsedConfig;
-      }
-    } else if (config && typeof config === 'object') {
-      // Use provided config object
-      this.config = config;
-    } else {
-      console.log("build config from env");
+	constructor(config = null) {
+		// If config is a string, treat it as a connection string
+		if (typeof config === 'string') {
+			if (parsedConfig.server === "localhost") {
+				this.config = {
+					connectionString: config
+				}
+			} else {
+				this.config = parsedConfig;
+			}
+		} else if (config && typeof config === 'object') {
+			// Use provided config object
+			this.config = config;
+		} else {
+			console.log("build config from env");
 
-      // Build config from environment variables or use defaults
-      this.config = this.buildConfigFromEnv();
-    }
+			// Build config from environment variables or use defaults
+			this.config = this.buildConfigFromEnv();
+		}
 
-    this.pool = null;
-  }
+		this.pool = null;
+	}
 
-  /**
-   * Build database configuration from environment variables
-   */
-  buildConfigFromEnv() {
-    // Check if a full connection string is provided
-    if (process.env.DB_CONNECTION_STRING) {
-      if (parsedConfig.server === "localhost") {
-        return {
-          connectionString: process.env.DB_CONNECTION_STRING
-        }
-      }
-      return parsedConfig;
-    }
+	/**
+	 * Build database configuration from environment variables
+	 */
+	buildConfigFromEnv() {
+		// Check if a full connection string is provided
+		if (process.env.DB_CONNECTION_STRING) {
+			if (parsedConfig.server === "localhost") {
+				return {
+					connectionString: process.env.DB_CONNECTION_STRING
+				}
+			}
+			return parsedConfig;
+		}
 
-    // Validate that DB_DATABASE is provided
-    if (!process.env.DB_DATABASE) {
-      throw new Error(
-        'Database configuration error: DB_DATABASE environment variable is required. ' +
-        'Please set DB_DATABASE or DB_CONNECTION_STRING in your .env file or environment variables.'
-      );
-    }
+		// Validate that DB_DATABASE is provided
+		if (!process.env.DB_DATABASE) {
+			throw new Error(
+				'Database configuration error: DB_DATABASE environment variable is required. ' +
+				'Please set DB_DATABASE or DB_CONNECTION_STRING in your .env file or environment variables.'
+			);
+		}
 
-    // Check if using Windows Authentication
-    const useWindowsAuth = process.env.DB_USE_WINDOWS_AUTH === 'true' ||
-      (!process.env.DB_USER && !process.env.DB_PASSWORD);
+		// Check if using Windows Authentication
+		const useWindowsAuth = process.env.DB_USE_WINDOWS_AUTH === 'true' ||
+			(!process.env.DB_USER && !process.env.DB_PASSWORD);
 
-    if (useWindowsAuth) {
-      // Build connection string for Windows Authentication
-      const server = process.env.DB_SERVER || 'localhost';
-      const database = process.env.DB_DATABASE;
-      const driver = process.env.DB_DRIVER || 'ODBC Driver 17 for SQL Server';
+		if (useWindowsAuth) {
+			// Build connection string for Windows Authentication
+			const server = process.env.DB_SERVER || 'localhost';
+			const database = process.env.DB_DATABASE;
+			const driver = process.env.DB_DRIVER || 'ODBC Driver 17 for SQL Server';
 
-      return {
-        connectionString: `Server=${server};Database=${database};Trusted_Connection=yes;TrustServerCertificate=yes;Driver={${driver}}`
-      };
-    } else {
-      // Build config object for SQL Authentication
-      return {
-        server: process.env.DB_SERVER || 'localhost',
-        database: process.env.DB_DATABASE,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        options: {
-          encrypt: process.env.DB_ENCRYPT === 'true',
-          trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false',
-          enableArithAbort: true
-        }
-      };
-    }
-  }
+			return {
+				connectionString: `Server=${server};Database=${database};Trusted_Connection=yes;TrustServerCertificate=yes;Driver={${driver}}`
+			};
+		} else {
+			// Build config object for SQL Authentication
+			return {
+				server: process.env.DB_SERVER || 'localhost',
+				database: process.env.DB_DATABASE,
+				user: process.env.DB_USER,
+				password: process.env.DB_PASSWORD,
+				options: {
+					encrypt: process.env.DB_ENCRYPT === 'true',
+					trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false',
+					enableArithAbort: true
+				}
+			};
+		}
+	}
 
-  /**
-   * Connect to SQL Server database
-   */
-  async connect() {
-    if (this.pool && this.pool.connected) {
-      console.log('[SQL Executor] Already connected to database');
-      return this.pool;
-    }
+	/**
+	 * Connect to SQL Server database
+	 */
+	async connect() {
+		if (this.pool && this.pool.connected) {
+			console.log('[SQL Executor] Already connected to database');
+			return this.pool;
+		}
 
-    console.log('[SQL Executor] Connecting to SQL Server...');
-    this.pool = await sql.connect(this.config);
-    console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
+		console.log('[SQL Executor] Connecting to SQL Server...');
+		this.pool = await sql.connect(this.config);
+		console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
 
-    return this.pool;
-  }
+		return this.pool;
+	}
 
-  /**
-   * Execute a SQL query
-   */
-  async executeQuery(query, params = {}) {
-    console.log('[SQL Executor] Executing query:', query.substring(0, 100) + '...');
+	/**
+	 * Execute a SQL query
+	 */
+	async executeQuery(query, params = {}) {
+		console.log('[SQL Executor] Executing query:', query.substring(0, 100) + '...');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    // Create request
-    const request = pool.request();
+		// Create request
+		const request = pool.request();
 
-    // Add parameters if provided
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
-    }
+		// Add parameters if provided
+		for (const [key, value] of Object.entries(params)) {
+			request.input(key, value);
+		}
 
-    // Execute query
-    const result = await request.query(query);
+		// Execute query
+		const result = await request.query(query);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            rowsAffected: result.rowsAffected,
-            recordCount: result.recordset ? result.recordset.length : 0,
-            data: result.recordset || [],
-            message: 'Query executed successfully'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						rowsAffected: result.rowsAffected,
+						recordCount: result.recordset ? result.recordset.length : 0,
+						data: result.recordset || [],
+						message: 'Query executed successfully'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Execute DQL (Data Query Language) statements - specifically SELECT queries
-   * This method is optimized for read-only queries and includes additional validation
-   */
-  async executeDQL(query, params = {}) {
-    // Validate that the query is a SELECT statement
-    const trimmedQuery = query.trim().toUpperCase();
-    if (!trimmedQuery.startsWith('SELECT') && !trimmedQuery.startsWith('WITH')) {
-      throw new Error('DQL executor only supports SELECT queries (queries starting with SELECT or WITH for CTEs)');
-    }
+	/**
+	 * Execute DQL (Data Query Language) statements - specifically SELECT queries
+	 * This method is optimized for read-only queries and includes additional validation
+	 */
+	async executeDQL(query, params = {}) {
+		// Validate that the query is a SELECT statement
+		const trimmedQuery = query.trim().toUpperCase();
+		if (!trimmedQuery.startsWith('SELECT') && !trimmedQuery.startsWith('WITH')) {
+			throw new Error('DQL executor only supports SELECT queries (queries starting with SELECT or WITH for CTEs)');
+		}
 
-    console.log('[SQL Executor] Executing DQL query:', query.substring(0, 100) + '...');
+		console.log('[SQL Executor] Executing DQL query:', query.substring(0, 100) + '...');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    // Create request
-    const request = pool.request();
+		// Create request
+		const request = pool.request();
 
-    // Add parameters if provided
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
-    }
+		// Add parameters if provided
+		for (const [key, value] of Object.entries(params)) {
+			request.input(key, value);
+		}
 
-    // Execute query with read-only intent
-    const result = await request.query(query);
+		// Execute query with read-only intent
+		const result = await request.query(query);
 
-    // Get column information
-    const columns = result.recordset && result.recordset.columns
-      ? Object.keys(result.recordset.columns).map(col => ({
-        name: col,
-        type: result.recordset.columns[col].type.declaration
-      }))
-      : [];
+		// Get column information
+		const columns = result.recordset && result.recordset.columns
+			? Object.keys(result.recordset.columns).map(col => ({
+				name: col,
+				type: result.recordset.columns[col].type.declaration
+			}))
+			: [];
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            recordCount: result.recordset ? result.recordset.length : 0,
-            columns: columns,
-            data: result.recordset || [],
-            message: 'DQL query executed successfully'
-          }, null, 2),
-        },
-      ],
-    };
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						recordCount: result.recordset ? result.recordset.length : 0,
+						columns: columns,
+						data: result.recordset || [],
+						message: 'DQL query executed successfully'
+					}, null, 2),
+				},
+			],
+		};
 
-  }
+	}
 
-  /**
-   * Execute DML (Data Manipulation Language) statements - INSERT, UPDATE, DELETE, MERGE
-   * This method is optimized for data modification operations with validation
-   */
-  async executeDML(query, params = {}) {
-    // Validate that the query is a DML statement
-    const trimmedQuery = query.trim().toUpperCase();
-    const isDML = trimmedQuery.startsWith('INSERT') ||
-      trimmedQuery.startsWith('UPDATE') ||
-      trimmedQuery.startsWith('DELETE') ||
-      trimmedQuery.startsWith('MERGE');
+	/**
+	 * Execute DML (Data Manipulation Language) statements - INSERT, UPDATE, DELETE, MERGE
+	 * This method is optimized for data modification operations with validation
+	 */
+	async executeDML(query, params = {}) {
+		// Validate that the query is a DML statement
+		const trimmedQuery = query.trim().toUpperCase();
+		const isDML = trimmedQuery.startsWith('INSERT') ||
+			trimmedQuery.startsWith('UPDATE') ||
+			trimmedQuery.startsWith('DELETE') ||
+			trimmedQuery.startsWith('MERGE');
 
-    if (!isDML) {
-      throw new Error('DML executor only supports INSERT, UPDATE, DELETE, and MERGE statements');
-    }
+		if (!isDML) {
+			throw new Error('DML executor only supports INSERT, UPDATE, DELETE, and MERGE statements');
+		}
 
-    console.log('[SQL Executor] Executing DML query:', query.substring(0, 100) + '...');
+		console.log('[SQL Executor] Executing DML query:', query.substring(0, 100) + '...');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    // Create request
-    const request = pool.request();
+		// Create request
+		const request = pool.request();
 
-    // Add parameters if provided
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
-    }
+		// Add parameters if provided
+		for (const [key, value] of Object.entries(params)) {
+			request.input(key, value);
+		}
 
-    // Execute query
-    const result = await request.query(query);
+		// Execute query
+		const result = await request.query(query);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            rowsAffected: result.rowsAffected,
-            totalRowsAffected: result.rowsAffected.reduce((sum, count) => sum + count, 0),
-            recordset: result.recordset || [],
-            message: 'DML statement executed successfully'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						rowsAffected: result.rowsAffected,
+						totalRowsAffected: result.rowsAffected.reduce((sum, count) => sum + count, 0),
+						recordset: result.recordset || [],
+						message: 'DML statement executed successfully'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Execute DDL (Data Definition Language) statements - CREATE, ALTER, DROP, TRUNCATE, etc.
-   * This method is for schema modifications and database structure changes
-   * WARNING: Use with caution as DDL operations can modify or destroy database structure
-   */
-  async executeDDL(query, params = {}) {
-    // Validate that the query is a DDL statement
-    const trimmedQuery = query.trim().toUpperCase();
-    const isDDL = trimmedQuery.startsWith('CREATE') ||
-      trimmedQuery.startsWith('ALTER') ||
-      trimmedQuery.startsWith('DROP') ||
-      trimmedQuery.startsWith('TRUNCATE') ||
-      trimmedQuery.startsWith('RENAME') ||
-      trimmedQuery.startsWith('COMMENT');
+	/**
+	 * Execute DDL (Data Definition Language) statements - CREATE, ALTER, DROP, TRUNCATE, etc.
+	 * This method is for schema modifications and database structure changes
+	 * WARNING: Use with caution as DDL operations can modify or destroy database structure
+	 */
+	async executeDDL(query, params = {}) {
+		// Validate that the query is a DDL statement
+		const trimmedQuery = query.trim().toUpperCase();
+		const isDDL = trimmedQuery.startsWith('CREATE') ||
+			trimmedQuery.startsWith('ALTER') ||
+			trimmedQuery.startsWith('DROP') ||
+			trimmedQuery.startsWith('TRUNCATE') ||
+			trimmedQuery.startsWith('RENAME') ||
+			trimmedQuery.startsWith('COMMENT');
 
-    if (!isDDL) {
-      throw new Error('DDL executor only supports CREATE, ALTER, DROP, TRUNCATE, RENAME, and COMMENT statements');
-    }
+		if (!isDDL) {
+			throw new Error('DDL executor only supports CREATE, ALTER, DROP, TRUNCATE, RENAME, and COMMENT statements');
+		}
 
-    console.log('[SQL Executor] ⚠️  Executing DDL query:', query.substring(0, 100) + '...');
+		console.log('[SQL Executor] ⚠️  Executing DDL query:', query.substring(0, 100) + '...');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    // Create request
-    const request = pool.request();
+		// Create request
+		const request = pool.request();
 
-    // Add parameters if provided
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
-    }
+		// Add parameters if provided
+		for (const [key, value] of Object.entries(params)) {
+			request.input(key, value);
+		}
 
-    // Execute query
-    const result = await request.query(query);
+		// Execute query
+		const result = await request.query(query);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            rowsAffected: result.rowsAffected,
-            message: 'DDL statement executed successfully',
-            warning: 'DDL operations have modified the database structure'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						rowsAffected: result.rowsAffected,
+						message: 'DDL statement executed successfully',
+						warning: 'DDL operations have modified the database structure'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Execute a stored procedure
-   */
-  async executeProcedure(procedureName, params = {}) {
-    console.log('[SQL Executor] Executing procedure:', procedureName);
+	/**
+	 * Execute a stored procedure
+	 */
+	async executeProcedure(procedureName, params = {}) {
+		console.log('[SQL Executor] Executing procedure:', procedureName);
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    // Create request
-    const request = pool.request();
+		// Create request
+		const request = pool.request();
 
-    // Add parameters if provided
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
-    }
+		// Add parameters if provided
+		for (const [key, value] of Object.entries(params)) {
+			request.input(key, value);
+		}
 
-    // Execute procedure
-    const result = await request.execute(procedureName);
+		// Execute procedure
+		const result = await request.execute(procedureName);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            rowsAffected: result.rowsAffected,
-            recordCount: result.recordset ? result.recordset.length : 0,
-            data: result.recordset || [],
-            returnValue: result.returnValue,
-            message: 'Stored procedure executed successfully'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						rowsAffected: result.rowsAffected,
+						recordCount: result.recordset ? result.recordset.length : 0,
+						data: result.recordset || [],
+						returnValue: result.returnValue,
+						message: 'Stored procedure executed successfully'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Get database version and connection info
-   */
-  async getDatabaseInfo() {
-    console.log('[SQL Executor] Getting database info');
+	/**
+	 * Get database version and connection info
+	 */
+	async getDatabaseInfo() {
+		console.log('[SQL Executor] Getting database info');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    const result = await pool.request().query(`
+		const result = await pool.request().query(`
         SELECT 
           @@VERSION AS version,
           DB_NAME() AS database_name,
@@ -379,31 +379,31 @@ class SQLExecutor {
           SUSER_SNAME() AS login_name
       `);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            info: result.recordset[0]
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						info: result.recordset[0]
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Discover tables in the database
-   */
-  async discoverTables(schema = null) {
-    console.log('[SQL Executor] Discovering tables', schema ? `in schema: ${schema}` : '');
+	/**
+	 * Discover tables in the database
+	 */
+	async discoverTables(schema = null) {
+		console.log('[SQL Executor] Discovering tables', schema ? `in schema: ${schema}` : '');
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    const request = pool.request();
+		const request = pool.request();
 
-    let query = `
+		let query = `
         SELECT 
           TABLE_SCHEMA,
           TABLE_NAME,
@@ -411,45 +411,45 @@ class SQLExecutor {
         FROM INFORMATION_SCHEMA.TABLES
       `;
 
-    if (schema) {
-      query += ` WHERE TABLE_SCHEMA = @schema`;
-      request.input('schema', schema);
-    }
+		if (schema) {
+			query += ` WHERE TABLE_SCHEMA = @schema`;
+			request.input('schema', schema);
+		}
 
-    query += ` ORDER BY TABLE_SCHEMA, TABLE_NAME`;
+		query += ` ORDER BY TABLE_SCHEMA, TABLE_NAME`;
 
-    const result = await request.query(query);
+		const result = await request.query(query);
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            tableCount: result.recordset.length,
-            tables: result.recordset,
-            message: 'Tables discovered successfully'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						tableCount: result.recordset.length,
+						tables: result.recordset,
+						message: 'Tables discovered successfully'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Get detailed information about a specific table
-   */
-  async getTableInfo(tableName, schema = 'dbo') {
-    console.log(`[SQL Executor] Getting table info for ${schema}.${tableName}`);
+	/**
+	 * Get detailed information about a specific table
+	 */
+	async getTableInfo(tableName, schema = 'dbo') {
+		console.log(`[SQL Executor] Getting table info for ${schema}.${tableName}`);
 
-    // Ensure connection is established
-    const pool = await this.connect();
+		// Ensure connection is established
+		const pool = await this.connect();
 
-    const request = pool.request();
-    request.input('tableName', tableName);
-    request.input('schema', schema);
+		const request = pool.request();
+		request.input('tableName', tableName);
+		request.input('schema', schema);
 
-    // Get column information
-    const columnsQuery = `
+		// Get column information
+		const columnsQuery = `
         SELECT 
           c.COLUMN_NAME,
           c.DATA_TYPE,
@@ -475,14 +475,14 @@ class SQLExecutor {
         ORDER BY c.ORDINAL_POSITION
       `;
 
-    const columnsResult = await request.query(columnsQuery);
+		const columnsResult = await request.query(columnsQuery);
 
-    // Get indexes information
-    const request2 = pool.request();
-    request2.input('tableName', tableName);
-    request2.input('schema', schema);
+		// Get indexes information
+		const request2 = pool.request();
+		request2.input('tableName', tableName);
+		request2.input('schema', schema);
 
-    const indexesQuery = `
+		const indexesQuery = `
         SELECT 
           i.name AS INDEX_NAME,
           i.type_desc AS INDEX_TYPE,
@@ -497,14 +497,14 @@ class SQLExecutor {
         ORDER BY i.name, ic.key_ordinal
       `;
 
-    const indexesResult = await request2.query(indexesQuery);
+		const indexesResult = await request2.query(indexesQuery);
 
-    // Get foreign keys information
-    const request3 = pool.request();
-    request3.input('tableName', tableName);
-    request3.input('schema', schema);
+		// Get foreign keys information
+		const request3 = pool.request();
+		request3.input('tableName', tableName);
+		request3.input('schema', schema);
 
-    const foreignKeysQuery = `
+		const foreignKeysQuery = `
         SELECT 
           fk.name AS FK_NAME,
           COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS COLUMN_NAME,
@@ -519,63 +519,63 @@ class SQLExecutor {
         ORDER BY fk.name
       `;
 
-    const foreignKeysResult = await request3.query(foreignKeysQuery);
+		const foreignKeysResult = await request3.query(foreignKeysQuery);
 
-    // Get row count
-    const request4 = pool.request();
-    request4.input('tableName', tableName);
-    request4.input('schema', schema);
+		// Get row count
+		const request4 = pool.request();
+		request4.input('tableName', tableName);
+		request4.input('schema', schema);
 
-    const rowCountQuery = `
+		const rowCountQuery = `
         SELECT COUNT(*) AS ROW_COUNT 
         FROM [${schema}].[${tableName}]
       `;
 
-    let rowCount = null;
-    try {
-      const rowCountResult = await request4.query(rowCountQuery);
-      rowCount = rowCountResult.recordset[0].ROW_COUNT;
-    } catch (err) {
-      console.log('[SQL Executor] Could not get row count:', err.message);
-    }
+		let rowCount = null;
+		try {
+			const rowCountResult = await request4.query(rowCountQuery);
+			rowCount = rowCountResult.recordset[0].ROW_COUNT;
+		} catch (err) {
+			console.log('[SQL Executor] Could not get row count:', err.message);
+		}
 
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            success: true,
-            table: {
-              schema: schema,
-              name: tableName,
-              rowCount: rowCount,
-              columns: columnsResult.recordset,
-              indexes: indexesResult.recordset,
-              foreignKeys: foreignKeysResult.recordset
-            },
-            message: 'Table information retrieved successfully'
-          }, null, 2),
-        },
-      ],
-    };
-  }
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({
+						success: true,
+						table: {
+							schema: schema,
+							name: tableName,
+							rowCount: rowCount,
+							columns: columnsResult.recordset,
+							indexes: indexesResult.recordset,
+							foreignKeys: foreignKeysResult.recordset
+						},
+						message: 'Table information retrieved successfully'
+					}, null, 2),
+				},
+			],
+		};
+	}
 
-  /**
-   * Close the database connection
-   */
-  async close() {
-    try {
-      if (this.pool) {
-        await this.pool.close();
-        this.pool = null;
-        console.log('[SQL Executor] Connection closed');
-      }
-    } catch (err) {
-      console.error('[SQL Executor] Error closing connection:', err.message);
-    }
-  }
+	/**
+	 * Close the database connection
+	 */
+	async close() {
+		try {
+			if (this.pool) {
+				await this.pool.close();
+				this.pool = null;
+				console.log('[SQL Executor] Connection closed');
+			}
+		} catch (err) {
+			console.error('[SQL Executor] Error closing connection:', err.message);
+		}
+	}
 }
 
 module.exports = {
-  SQLExecutor,
+	SQLExecutor,
 };
