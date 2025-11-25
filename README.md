@@ -53,6 +53,25 @@ Or using a connection string:
 }
 ```
 
+Or run directly with npx:
+
+```json
+{
+    "mcpServers": {
+        "mssql": {
+            "command": "npx",
+            "args": ["github:stilllovee/mssql-mcpserver"],
+            "env": {
+                "DB_SERVER": "localhost",
+                "DB_DATABASE": "x4",
+                "DB_USE_WINDOWS_AUTH": "true",
+                "DB_DRIVER": "ODBC Driver 17 for SQL Server" //Optional
+            }
+        }
+    }
+}
+```
+
 ### Available Environment Variables
 
 | Variable                      | Description                                           | Default                           |
@@ -80,7 +99,8 @@ Or using a connection string:
 3.  **sql_get_database_info** - Get database connection information
 
     -   No parameters required
-4. And more ...
+
+4.  And more ...
 
 ## Requirements
 
