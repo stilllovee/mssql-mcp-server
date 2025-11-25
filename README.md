@@ -28,9 +28,8 @@ Add to your Claude Desktop configuration:
             "args": ["/path/to/project"],
             "env": {
                 "DB_SERVER": "localhost",
-                "DB_DATABASE": "x4",
-                "DB_USE_WINDOWS_AUTH": "true",
-                "DB_DRIVER": "ODBC Driver 17 for SQL Server" //Optional
+                "DB_DATABASE": "ecommerce",
+                "DB_USE_WINDOWS_AUTH": "true"
             }
         }
     }
@@ -46,7 +45,7 @@ Or using a connection string:
             "command": "node",
             "args": ["/path/to/project"],
             "env": {
-                "DB_CONNECTION_STRING": "Server=localhost;Database=x4;Trusted_Connection=yes;TrustServerCertificate=yes"
+                "DB_CONNECTION_STRING": "Server=localhost;Database=ecommerce;Trusted_Connection=yes;TrustServerCertificate=yes"
             }
         }
     }
@@ -63,9 +62,8 @@ Or run directly with npx:
             "args": ["github:stilllovee/mssql-mcp-server"],
             "env": {
                 "DB_SERVER": "localhost",
-                "DB_DATABASE": "x4",
-                "DB_USE_WINDOWS_AUTH": "true",
-                "DB_DRIVER": "ODBC Driver 17 for SQL Server" //Optional
+                "DB_DATABASE": "ecommerce",
+                "DB_USE_WINDOWS_AUTH": "true"
             }
         }
     }
@@ -78,7 +76,7 @@ Or run directly with npx:
 | ----------------------------- | ----------------------------------------------------- | --------------------------------- |
 | `DB_CONNECTION_STRING`        | Full connection string (overrides all other settings) | -                                 |
 | `DB_SERVER`                   | SQL Server hostname or IP                             | `localhost`                       |
-| `DB_DATABASE`                 | Database name                                         | `x4`                              |
+| `DB_DATABASE`                 | Database name                                         | `ecommerce`                              |
 | `DB_USER`                     | Username for SQL Server Authentication                | -                                 |
 | `DB_PASSWORD`                 | Password for SQL Server Authentication                | -                                 |
 | `DB_USE_WINDOWS_AUTH`         | Use Windows Authentication                            | `true` (if user/password not set) |
