@@ -1,0 +1,23 @@
+{
+  "name": "mssql-mcp-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "bin": {
+    "mssql-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "modelcontextprotocol"
+  ],
+  "author": "milkywayy1511",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "msnodesqlv8": "^5.1.1",
+    "mssql": "^11.0.1"
+  }
+}
