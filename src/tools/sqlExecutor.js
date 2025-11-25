@@ -241,10 +241,13 @@ class SQLExecutor {
 
 		// Get column information
 		const columns = result.recordset && result.recordset.columns
-			? Object.keys(result.recordset.columns).map(col => ({
-				name: col,
-				type: result.recordset.columns[col].type.declaration
-			}))
+			? Object.keys(result.recordset.columns).map(col => {
+				const colInfo = result.recordset.columns[col];
+				return {
+					name: col,
+					type: colInfo.type && colInfo.type.declaration ? colInfo.type.declaration : (colInfo.type ? colInfo.type.name || 'unknown' : 'unknown')
+				};
+			})
 			: [];
 
 		return {
