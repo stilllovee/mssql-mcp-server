@@ -202,6 +202,7 @@ class MCPServer {
 				}
 			} catch (error) {
 				console.error(`[MCP Server] Error executing tool ${name}:`, error);
+				throw new Error(`Tool execution failed: ${error.message}`);
 			}
 
 			throw new Error(`Unknown tool: ${name}`);
