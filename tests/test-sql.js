@@ -38,14 +38,14 @@ async function testSQLExecutor() {
 		// Test 4: List tables in database (example)
 		console.log('Test 4: Listing tables in database...');
 		const tablesResult = await sqlExecutor.executeQuery(`
-      SELECT 
-        TABLE_SCHEMA,
-        TABLE_NAME,
-        TABLE_TYPE
-      FROM INFORMATION_SCHEMA.TABLES
-      WHERE TABLE_TYPE = 'BASE TABLE'
-      ORDER BY TABLE_SCHEMA, TABLE_NAME
-    `);
+		SELECT 
+			TABLE_SCHEMA,
+			TABLE_NAME,
+			TABLE_TYPE
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_TYPE = 'BASE TABLE'
+		ORDER BY TABLE_SCHEMA, TABLE_NAME
+		`);
 		console.log('Result:', JSON.parse(tablesResult.content[0].text));
 		console.log('\n---\n');
 

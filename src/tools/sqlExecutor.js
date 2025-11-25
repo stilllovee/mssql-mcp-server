@@ -372,12 +372,12 @@ class SQLExecutor {
 		const pool = await this.connect();
 
 		const result = await pool.request().query(`
-        SELECT 
-          @@VERSION AS version,
-          DB_NAME() AS database_name,
-          @@SERVERNAME AS server_name,
-          SUSER_SNAME() AS login_name
-      `);
+			SELECT 
+			@@VERSION AS version,
+			DB_NAME() AS database_name,
+			@@SERVERNAME AS server_name,
+			SUSER_SNAME() AS login_name
+		`);
 
 		return {
 			content: [
@@ -404,12 +404,12 @@ class SQLExecutor {
 		const request = pool.request();
 
 		let query = `
-        SELECT 
-          TABLE_SCHEMA,
-          TABLE_NAME,
-          TABLE_TYPE
-        FROM INFORMATION_SCHEMA.TABLES
-      `;
+			SELECT 
+			TABLE_SCHEMA,
+			TABLE_NAME,
+			TABLE_TYPE
+			FROM INFORMATION_SCHEMA.TABLES
+		`;
 
 		if (schema) {
 			query += ` WHERE TABLE_SCHEMA = @schema`;
@@ -450,30 +450,30 @@ class SQLExecutor {
 
 		// Get column information
 		const columnsQuery = `
-        SELECT 
-          c.COLUMN_NAME,
-          c.DATA_TYPE,
-          c.CHARACTER_MAXIMUM_LENGTH,
-          c.NUMERIC_PRECISION,
-          c.NUMERIC_SCALE,
-          c.IS_NULLABLE,
-          c.COLUMN_DEFAULT,
-          CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'YES' ELSE 'NO' END AS IS_PRIMARY_KEY
-        FROM INFORMATION_SCHEMA.COLUMNS c
-        LEFT JOIN (
-          SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
-          FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-          INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-            ON tc.CONSTRAINT_TYPE = 'PRIMARY KEY' 
-            AND tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-            AND tc.TABLE_SCHEMA = ku.TABLE_SCHEMA
-            AND tc.TABLE_NAME = ku.TABLE_NAME
-        ) pk ON c.TABLE_SCHEMA = pk.TABLE_SCHEMA 
-          AND c.TABLE_NAME = pk.TABLE_NAME 
-          AND c.COLUMN_NAME = pk.COLUMN_NAME
-        WHERE c.TABLE_NAME = @tableName AND c.TABLE_SCHEMA = @schema
-        ORDER BY c.ORDINAL_POSITION
-      `;
+			SELECT 
+			c.COLUMN_NAME,
+			c.DATA_TYPE,
+			c.CHARACTER_MAXIMUM_LENGTH,
+			c.NUMERIC_PRECISION,
+			c.NUMERIC_SCALE,
+			c.IS_NULLABLE,
+			c.COLUMN_DEFAULT,
+			CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'YES' ELSE 'NO' END AS IS_PRIMARY_KEY
+			FROM INFORMATION_SCHEMA.COLUMNS c
+			LEFT JOIN (
+			SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
+			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+			INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+				ON tc.CONSTRAINT_TYPE = 'PRIMARY KEY' 
+				AND tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+				AND tc.TABLE_SCHEMA = ku.TABLE_SCHEMA
+				AND tc.TABLE_NAME = ku.TABLE_NAME
+			) pk ON c.TABLE_SCHEMA = pk.TABLE_SCHEMA 
+			AND c.TABLE_NAME = pk.TABLE_NAME 
+			AND c.COLUMN_NAME = pk.COLUMN_NAME
+			WHERE c.TABLE_NAME = @tableName AND c.TABLE_SCHEMA = @schema
+			ORDER BY c.ORDINAL_POSITION
+		`;
 
 		const columnsResult = await request.query(columnsQuery);
 
@@ -483,19 +483,19 @@ class SQLExecutor {
 		request2.input('schema', schema);
 
 		const indexesQuery = `
-        SELECT 
-          i.name AS INDEX_NAME,
-          i.type_desc AS INDEX_TYPE,
-          i.is_unique AS IS_UNIQUE,
-          i.is_primary_key AS IS_PRIMARY_KEY,
-          COL_NAME(ic.object_id, ic.column_id) AS COLUMN_NAME
-        FROM sys.indexes i
-        INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-        INNER JOIN sys.tables t ON i.object_id = t.object_id
-        INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-        WHERE t.name = @tableName AND s.name = @schema
-        ORDER BY i.name, ic.key_ordinal
-      `;
+			SELECT 
+			i.name AS INDEX_NAME,
+			i.type_desc AS INDEX_TYPE,
+			i.is_unique AS IS_UNIQUE,
+			i.is_primary_key AS IS_PRIMARY_KEY,
+			COL_NAME(ic.object_id, ic.column_id) AS COLUMN_NAME
+			FROM sys.indexes i
+			INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+			INNER JOIN sys.tables t ON i.object_id = t.object_id
+			INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+			WHERE t.name = @tableName AND s.name = @schema
+			ORDER BY i.name, ic.key_ordinal
+		`;
 
 		const indexesResult = await request2.query(indexesQuery);
 
@@ -505,19 +505,19 @@ class SQLExecutor {
 		request3.input('schema', schema);
 
 		const foreignKeysQuery = `
-        SELECT 
-          fk.name AS FK_NAME,
-          COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS COLUMN_NAME,
-          OBJECT_SCHEMA_NAME(fk.referenced_object_id) AS REFERENCED_SCHEMA,
-          OBJECT_NAME(fk.referenced_object_id) AS REFERENCED_TABLE,
-          COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS REFERENCED_COLUMN
-        FROM sys.foreign_keys fk
-        INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
-        INNER JOIN sys.tables t ON fk.parent_object_id = t.object_id
-        INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-        WHERE t.name = @tableName AND s.name = @schema
-        ORDER BY fk.name
-      `;
+			SELECT 
+			fk.name AS FK_NAME,
+			COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS COLUMN_NAME,
+			OBJECT_SCHEMA_NAME(fk.referenced_object_id) AS REFERENCED_SCHEMA,
+			OBJECT_NAME(fk.referenced_object_id) AS REFERENCED_TABLE,
+			COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS REFERENCED_COLUMN
+			FROM sys.foreign_keys fk
+			INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
+			INNER JOIN sys.tables t ON fk.parent_object_id = t.object_id
+			INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+			WHERE t.name = @tableName AND s.name = @schema
+			ORDER BY fk.name
+		`;
 
 		const foreignKeysResult = await request3.query(foreignKeysQuery);
 
@@ -527,9 +527,9 @@ class SQLExecutor {
 		request4.input('schema', schema);
 
 		const rowCountQuery = `
-        SELECT COUNT(*) AS ROW_COUNT 
-        FROM [${schema}].[${tableName}]
-      `;
+			SELECT COUNT(*) AS ROW_COUNT 
+			FROM [${schema}].[${tableName}]
+		`;
 
 		let rowCount = null;
 		try {
