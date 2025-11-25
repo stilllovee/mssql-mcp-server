@@ -3,7 +3,7 @@
  * This script tests the SQL Server connection and basic query execution
  */
 
-const { SQLExecutor } = require('./src/tools/sqlExecutor');
+const { SQLExecutor } = require('../src/tools/sqlExecutor');
 
 async function testSQLExecutor() {
   const sqlExecutor = new SQLExecutor();

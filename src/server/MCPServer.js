@@ -5,10 +5,10 @@ const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontext
 const { SQLExecutor } = require('../tools/sqlExecutor');
 
 class MCPServer {
-  constructor() {
+  constructor(dbConfig = null) {
     this.server = new Server(
       {
-        name: 'todo-mcp-server',
+        name: 'mssql-mcp-server',
         version: '1.0.0',
       },
       {
@@ -18,8 +18,8 @@ class MCPServer {
       }
     );
 
-    // Initialize database and task manager
-    this.sqlExecutor = new SQLExecutor();
+    // Initialize database with optional config
+    this.sqlExecutor = new SQLExecutor(dbConfig);
 
     this.setupToolHandlers();
     this.setupErrorHandling();
@@ -32,7 +32,7 @@ class MCPServer {
         tools: [
           {
             name: 'sql_execute_query',
-            description: 'Execute a SQL query against SQL Server database (x4) using Windows Authentication. Returns query results or error details.',
+            description: 'Execute a SQL query against SQL Server database. Returns query results or error details.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -50,7 +50,7 @@ class MCPServer {
           },
           {
             name: 'sql_execute_procedure',
-            description: 'Execute a stored procedure in SQL Server database (x4). Returns procedure results or error details.',
+            description: 'Execute a stored procedure in SQL Server database. Returns procedure results or error details.',
             inputSchema: {
               type: 'object',
               properties: {

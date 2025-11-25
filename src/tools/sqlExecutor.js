@@ -4,16 +4,69 @@ const sql = require('mssql/msnodesqlv8');
  * SQL Server executor functionality
  */
 class SQLExecutor {
-  constructor(connectionString = null) {
-    // Default connection string using Windows Authentication
-    this.connectionString = connectionString || 
-      'Server=localhost;Database=x4;Trusted_Connection=yes;TrustServerCertificate=yes;Driver={ODBC Driver 17 for SQL Server}';
-    
-    this.config = {
-      connectionString: this.connectionString
-    };
+  constructor(config = null) {
+    // If config is a string, treat it as a connection string
+    if (typeof config === 'string') {
+      this.config = {
+        connectionString: config
+      };
+    } else if (config && typeof config === 'object') {
+      // Use provided config object
+      this.config = config;
+    } else {
+      // Build config from environment variables or use defaults
+      this.config = this.buildConfigFromEnv();
+    }
     
     this.pool = null;
+  }
+
+  /**
+   * Build database configuration from environment variables
+   */
+  buildConfigFromEnv() {
+    // Check if a full connection string is provided
+    if (process.env.DB_CONNECTION_STRING) {
+      return {
+        connectionString: process.env.DB_CONNECTION_STRING
+      };
+    }
+
+    // Validate that DB_DATABASE is provided
+    if (!process.env.DB_DATABASE) {
+      throw new Error(
+        'Database configuration error: DB_DATABASE environment variable is required. ' +
+        'Please set DB_DATABASE or DB_CONNECTION_STRING in your .env file or environment variables.'
+      );
+    }
+
+    // Check if using Windows Authentication
+    const useWindowsAuth = process.env.DB_USE_WINDOWS_AUTH === 'true' || 
+                          (!process.env.DB_USER && !process.env.DB_PASSWORD);
+
+    if (useWindowsAuth) {
+      // Build connection string for Windows Authentication
+      const server = process.env.DB_SERVER || 'localhost';
+      const database = process.env.DB_DATABASE;
+      const driver = process.env.DB_DRIVER || 'ODBC Driver 17 for SQL Server';
+      
+      return {
+        connectionString: `Server=${server};Database=${database};Trusted_Connection=yes;TrustServerCertificate=yes;Driver={${driver}}`
+      };
+    } else {
+      // Build config object for SQL Authentication
+      return {
+        server: process.env.DB_SERVER || 'localhost',
+        database: process.env.DB_DATABASE,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        options: {
+          encrypt: process.env.DB_ENCRYPT === 'true',
+          trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE !== 'false',
+          enableArithAbort: true
+        }
+      };
+    }
   }
 
   /**

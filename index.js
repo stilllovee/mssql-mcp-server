@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const { MCPServer } = require('./src/server');
 
 // Start the server
