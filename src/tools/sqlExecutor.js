@@ -196,18 +196,63 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error executing DQL query:', error);
+      // Re-throw the error instead of returning success: false
+      throw error;
+    }
+  }
+
+  /**
+   * Execute DML (Data Manipulation Language) statements - INSERT, UPDATE, DELETE, MERGE
+   * This method is optimized for data modification operations with validation
+   */
+  async executeDML(query, params = {}) {
+    try {
+      // Validate that the query is a DML statement
+      const trimmedQuery = query.trim().toUpperCase();
+      const isDML = trimmedQuery.startsWith('INSERT') || 
+                    trimmedQuery.startsWith('UPDATE') || 
+                    trimmedQuery.startsWith('DELETE') || 
+                    trimmedQuery.startsWith('MERGE');
+      
+      if (!isDML) {
+        throw new Error('DML executor only supports INSERT, UPDATE, DELETE, and MERGE statements');
+      }
+
+      console.log('[SQL Executor] Executing DML query:', query.substring(0, 100) + '...');
+
+      // Ensure connection is established
+      const pool = await this.connect();
+
+      // Create request
+      const request = pool.request();
+
+      // Add parameters if provided
+      for (const [key, value] of Object.entries(params)) {
+        request.input(key, value);
+      }
+
+      // Execute query
+      const result = await request.query(query);
+
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify({
-              success: false,
-              error: error.message,
-              query: query.substring(0, 200)
+              success: true,
+              rowsAffected: result.rowsAffected,
+              totalRowsAffected: result.rowsAffected.reduce((sum, count) => sum + count, 0),
+              recordset: result.recordset || [],
+              message: 'DML statement executed successfully'
             }, null, 2),
           },
         ],
       };
+
+    } catch (error) {
+      console.error('[SQL Executor] Error executing DML query:', error);
+      // Re-throw the error instead of returning success: false
+      throw error;
     }
   }
 

@@ -67,6 +67,24 @@ class MCPServer {
             },
           },
           {
+            name: 'sql_execute_dml',
+            description: 'Execute DML (Data Manipulation Language) statements - INSERT, UPDATE, DELETE, MERGE. This is optimized for data modification operations and includes validation to ensure only DML statements are executed.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: {
+                  type: 'string',
+                  description: 'The DML statement to execute (INSERT, UPDATE, DELETE, or MERGE).',
+                },
+                params: {
+                  type: 'object',
+                  description: 'Optional parameters for parameterized queries (key-value pairs)',
+                },
+              },
+              required: ['query'],
+            },
+          },
+          {
             name: 'sql_execute_procedure',
             description: 'Execute a stored procedure in SQL Server database. Returns procedure results or error details.',
             inputSchema: {
@@ -138,6 +156,10 @@ class MCPServer {
 
       if (name === 'sql_execute_dql') {
         return await this.sqlExecutor.executeDQL(args.query, args.params || {});
+      }
+
+      if (name === 'sql_execute_dml') {
+        return await this.sqlExecutor.executeDML(args.query, args.params || {});
       }
 
       if (name === 'sql_execute_procedure') {
