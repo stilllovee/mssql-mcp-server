@@ -85,6 +85,24 @@ class MCPServer {
             },
           },
           {
+            name: 'sql_execute_ddl',
+            description: 'Execute DDL (Data Definition Language) statements - CREATE, ALTER, DROP, TRUNCATE, etc. WARNING: Use with extreme caution as these operations modify or destroy database structure and cannot be rolled back easily.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: {
+                  type: 'string',
+                  description: 'The DDL statement to execute (CREATE, ALTER, DROP, TRUNCATE, RENAME, COMMENT).',
+                },
+                params: {
+                  type: 'object',
+                  description: 'Optional parameters for parameterized queries (key-value pairs)',
+                },
+              },
+              required: ['query'],
+            },
+          },
+          {
             name: 'sql_execute_procedure',
             description: 'Execute a stored procedure in SQL Server database. Returns procedure results or error details.',
             inputSchema: {
@@ -160,6 +178,10 @@ class MCPServer {
 
       if (name === 'sql_execute_dml') {
         return await this.sqlExecutor.executeDML(args.query, args.params || {});
+      }
+
+      if (name === 'sql_execute_ddl') {
+        return await this.sqlExecutor.executeDDL(args.query, args.params || {});
       }
 
       if (name === 'sql_execute_procedure') {

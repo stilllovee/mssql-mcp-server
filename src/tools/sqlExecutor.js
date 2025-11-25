@@ -257,6 +257,62 @@ class SQLExecutor {
   }
 
   /**
+   * Execute DDL (Data Definition Language) statements - CREATE, ALTER, DROP, TRUNCATE, etc.
+   * This method is for schema modifications and database structure changes
+   * WARNING: Use with caution as DDL operations can modify or destroy database structure
+   */
+  async executeDDL(query, params = {}) {
+    try {
+      // Validate that the query is a DDL statement
+      const trimmedQuery = query.trim().toUpperCase();
+      const isDDL = trimmedQuery.startsWith('CREATE') || 
+                    trimmedQuery.startsWith('ALTER') || 
+                    trimmedQuery.startsWith('DROP') || 
+                    trimmedQuery.startsWith('TRUNCATE') ||
+                    trimmedQuery.startsWith('RENAME') ||
+                    trimmedQuery.startsWith('COMMENT');
+      
+      if (!isDDL) {
+        throw new Error('DDL executor only supports CREATE, ALTER, DROP, TRUNCATE, RENAME, and COMMENT statements');
+      }
+
+      console.log('[SQL Executor] ⚠️  Executing DDL query:', query.substring(0, 100) + '...');
+
+      // Ensure connection is established
+      const pool = await this.connect();
+
+      // Create request
+      const request = pool.request();
+
+      // Add parameters if provided
+      for (const [key, value] of Object.entries(params)) {
+        request.input(key, value);
+      }
+
+      // Execute query
+      const result = await request.query(query);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              rowsAffected: result.rowsAffected,
+              message: 'DDL statement executed successfully',
+              warning: 'DDL operations have modified the database structure'
+            }, null, 2),
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error('[SQL Executor] Error executing DDL query:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Execute a stored procedure
    */
   async executeProcedure(procedureName, params = {}) {
