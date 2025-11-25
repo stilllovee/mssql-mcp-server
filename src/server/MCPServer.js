@@ -89,6 +89,24 @@ class MCPServer {
               required: [],
             },
           },
+          {
+            name: 'sql_get_table_info',
+            description: 'Get detailed information about a specific table including columns, data types, constraints, indexes, foreign keys, and row count.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                table_name: {
+                  type: 'string',
+                  description: 'The name of the table to get information about',
+                },
+                schema: {
+                  type: 'string',
+                  description: 'Optional schema name (defaults to "dbo")',
+                },
+              },
+              required: ['table_name'],
+            },
+          },
         ],
       };
     });
@@ -110,6 +128,10 @@ class MCPServer {
 
       if (name === 'sql_discover_tables') {
         return await this.sqlExecutor.discoverTables(args.schema || null);
+      }
+
+      if (name === 'sql_get_table_info') {
+        return await this.sqlExecutor.getTableInfo(args.table_name, args.schema || 'dbo');
       }
 
       throw new Error(`Unknown tool: ${name}`);
