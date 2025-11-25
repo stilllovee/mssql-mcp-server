@@ -244,6 +244,65 @@ class SQLExecutor {
   }
 
   /**
+   * Discover tables in the database
+   */
+  async discoverTables(schema = null) {
+    try {
+      console.log('[SQL Executor] Discovering tables', schema ? `in schema: ${schema}` : '');
+
+      // Ensure connection is established
+      const pool = await this.connect();
+
+      const request = pool.request();
+      
+      let query = `
+        SELECT 
+          TABLE_SCHEMA,
+          TABLE_NAME,
+          TABLE_TYPE
+        FROM INFORMATION_SCHEMA.TABLES
+      `;
+
+      if (schema) {
+        query += ` WHERE TABLE_SCHEMA = @schema`;
+        request.input('schema', schema);
+      }
+
+      query += ` ORDER BY TABLE_SCHEMA, TABLE_NAME`;
+
+      const result = await request.query(query);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              tableCount: result.recordset.length,
+              tables: result.recordset,
+              message: 'Tables discovered successfully'
+            }, null, 2),
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error('[SQL Executor] Error discovering tables:', error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: error.message
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  /**
    * Close the database connection
    */
   async close() {

@@ -75,6 +75,20 @@ class MCPServer {
               required: [],
             },
           },
+          {
+            name: 'sql_discover_tables',
+            description: 'Discover all tables in the SQL Server database. Optionally filter by schema name.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                schema: {
+                  type: 'string',
+                  description: 'Optional schema name to filter tables (e.g., "dbo", "sales")',
+                },
+              },
+              required: [],
+            },
+          },
         ],
       };
     });
@@ -92,6 +106,10 @@ class MCPServer {
 
       if (name === 'sql_get_database_info') {
         return await this.sqlExecutor.getDatabaseInfo();
+      }
+
+      if (name === 'sql_discover_tables') {
+        return await this.sqlExecutor.discoverTables(args.schema || null);
       }
 
       throw new Error(`Unknown tool: ${name}`);
