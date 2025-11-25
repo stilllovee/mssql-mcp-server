@@ -144,6 +144,74 @@ class SQLExecutor {
   }
 
   /**
+   * Execute DQL (Data Query Language) statements - specifically SELECT queries
+   * This method is optimized for read-only queries and includes additional validation
+   */
+  async executeDQL(query, params = {}) {
+    try {
+      // Validate that the query is a SELECT statement
+      const trimmedQuery = query.trim().toUpperCase();
+      if (!trimmedQuery.startsWith('SELECT') && !trimmedQuery.startsWith('WITH')) {
+        throw new Error('DQL executor only supports SELECT queries (queries starting with SELECT or WITH for CTEs)');
+      }
+
+      console.log('[SQL Executor] Executing DQL query:', query.substring(0, 100) + '...');
+
+      // Ensure connection is established
+      const pool = await this.connect();
+
+      // Create request
+      const request = pool.request();
+
+      // Add parameters if provided
+      for (const [key, value] of Object.entries(params)) {
+        request.input(key, value);
+      }
+
+      // Execute query with read-only intent
+      const result = await request.query(query);
+
+      // Get column information
+      const columns = result.recordset && result.recordset.columns 
+        ? Object.keys(result.recordset.columns).map(col => ({
+            name: col,
+            type: result.recordset.columns[col].type.declaration
+          }))
+        : [];
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              recordCount: result.recordset ? result.recordset.length : 0,
+              columns: columns,
+              data: result.recordset || [],
+              message: 'DQL query executed successfully'
+            }, null, 2),
+          },
+        ],
+      };
+
+    } catch (error) {
+      console.error('[SQL Executor] Error executing DQL query:', error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              query: query.substring(0, 200)
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  /**
    * Execute a stored procedure
    */
   async executeProcedure(procedureName, params = {}) {

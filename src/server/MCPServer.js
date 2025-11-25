@@ -49,6 +49,24 @@ class MCPServer {
             },
           },
           {
+            name: 'sql_execute_dql',
+            description: 'Execute DQL (Data Query Language) statements - specifically SELECT queries. This is optimized for read-only queries and includes validation to ensure only SELECT statements are executed.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: {
+                  type: 'string',
+                  description: 'The SELECT query to execute. Supports CTEs (WITH clause) and all SELECT variations.',
+                },
+                params: {
+                  type: 'object',
+                  description: 'Optional parameters for parameterized queries (key-value pairs)',
+                },
+              },
+              required: ['query'],
+            },
+          },
+          {
             name: 'sql_execute_procedure',
             description: 'Execute a stored procedure in SQL Server database. Returns procedure results or error details.',
             inputSchema: {
@@ -116,6 +134,10 @@ class MCPServer {
       const { name, arguments: args } = request.params;
       if (name === 'sql_execute_query') {
         return await this.sqlExecutor.executeQuery(args.query, args.params || {});
+      }
+
+      if (name === 'sql_execute_dql') {
+        return await this.sqlExecutor.executeDQL(args.query, args.params || {});
       }
 
       if (name === 'sql_execute_procedure') {
