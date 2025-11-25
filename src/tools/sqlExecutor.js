@@ -44,48 +44,51 @@ function parseConnectionString(connectionString) {
 function buildConnectionStringForWindowsAuth(parsedConfig) {
 	const driver = parsedConfig.driver || 'ODBC Driver 17 for SQL Server';
 	let connStr = `Driver={${driver}};Server=${parsedConfig.server}`;
-	
+
 	if (parsedConfig.database) {
 		connStr += `;Database=${parsedConfig.database}`;
 	}
-	
+
 	connStr += `;Trusted_Connection=yes`;
-	
+
 	if (parsedConfig.options.trustServerCertificate) {
 		connStr += `;TrustServerCertificate=yes`;
 	}
-	
+
 	return connStr;
 }
-const parsedConfig = parseConnectionString(connectionString);
 
-// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
-const isWindowsAuth = !parsedConfig.user && !parsedConfig.password;
-const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") || 
-                      parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
-                      parsedConfig.server.includes("\\");
+sql = require('mssql');
+let isWindowsAuth = false;
+if (connectionString) {
+	const parsedConfig = parseConnectionString(connectionString);
 
-console.log("🚀 ~ parsedConfig:", parsedConfig);
-console.log("🚀 ~ isWindowsAuth:", isWindowsAuth, "isLocalServer:", isLocalServer);
+	// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
+	const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") ||
+	parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
+	parsedConfig.server.includes("\\");
+	isWindowsAuth = (!parsedConfig.user && !parsedConfig.password) && isLocalServer;
 
-if (isWindowsAuth && isLocalServer) {
-	console.log("using windows auth driver (msnodesqlv8)");
-	sql = require('mssql/msnodesqlv8');
-} else {
-	console.log("using standard mssql driver");
-	sql = require('mssql');
 }
 
+if(process.env.DB_USE_WINDOWS_AUTH === 'true') {
+	isWindowsAuth = true;
+}
+
+if (isWindowsAuth) {
+	console.log("using windows auth driver (msnodesqlv8)");
+	sql = require('mssql/msnodesqlv8');
+}
 /**
  * SQL Server executor functionality
  */
 class SQLExecutor {
 	constructor(config = null) {
 		// Check if using Windows Authentication
-		const isWindowsAuth = !parsedConfig.user && !parsedConfig.password;
-		
+
 		// If config is a string, treat it as a connection string
 		if (typeof config === 'string') {
+			const isWindowsAuth = !parsedConfig.user && !parsedConfig.password;
 			if (isWindowsAuth) {
 				// Rebuild connection string with Driver parameter for msnodesqlv8
 				this.config = {
