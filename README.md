@@ -113,7 +113,7 @@ Or using a connection string:
       "command": "node",
       "args": ["/path/to/mssql-mcpserver-develop/index.js"],
       "env": {
-        "DB_CONNECTION_STRING": "Server=localhost;Database=x4;Trusted_Connection=yes;TrustServerCertificate=yes;Driver={ODBC Driver 17 for SQL Server}"
+        "DB_CONNECTION_STRING": "Server=localhost;Database=x4;Trusted_Connection=yes;TrustServerCertificate=yes"
       }
     }
   }
