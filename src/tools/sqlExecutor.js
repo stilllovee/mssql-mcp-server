@@ -1,24 +1,120 @@
-const sql = require('mssql/msnodesqlv8');
 
+let sql
+var config = process.env.DB_CONNECTION_STRING;
+function parseConnectionString(connectionString) {
+  const params = {};
+  const pairs = connectionString.split(';');
+
+  for (const pair of pairs) {
+    const [key, value] = pair.split('=').map(s => s.trim());
+    if (key && value) {
+      params[key.toLowerCase()] = value;
+    }
+  }
+
+  // Extract server and port
+  let server = params['server'] || 'localhost';
+  let port = 1433;
+
+  if (server.startsWith('tcp:')) {
+    server = server.substring(4);
+  }
+
+  if (server.includes(',')) {
+    [server, port] = server.split(',');
+    port = parseInt(port);
+  }
+
+  return {
+    server: server,
+    port: port,
+    database: params['database'] || params['initial catalog'],
+    user: params['user id'] || params['uid'],
+    password: params['password'] || params['pwd'],
+    options: {
+      encrypt: true,
+      trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
+      enableArithAbort: true
+    }
+  };
+}
+const parsedConfig = parseConnectionString(config);
+
+if (parsedConfig.server === "localhost") {
+  sql = require('mssql/msnodesqlv8')
+} else {
+  sql = require('mssql')
+}
 /**
  * SQL Server executor functionality
  */
 class SQLExecutor {
   constructor(config = null) {
+    console.log("🚀 ~ SQLExecutor ~ constructor ~ config:", config)
     // If config is a string, treat it as a connection string
     if (typeof config === 'string') {
-      this.config = {
-        connectionString: config
-      };
+      const parsedConfig = this.parseConnectionString(config);
+      console.log("🚀 ~ SQLExecutor ~ constructor ~ parsedConfig:", parsedConfig)
+      if (parsedConfig.server === "localhost") {
+        this.config = {
+          connectionString: config
+        }
+      } else {
+        this.config = parsedConfig;
+      }
     } else if (config && typeof config === 'object') {
       // Use provided config object
       this.config = config;
     } else {
+      console.log("build config from env");
+
       // Build config from environment variables or use defaults
       this.config = this.buildConfigFromEnv();
+      console.log("🚀 ~ SQLExecutor ~ constructor ~ this.config:", this.config)
     }
-    
+
     this.pool = null;
+  }
+
+  /**
+   * Parse connection string into config object for Tedious driver
+   */
+  parseConnectionString(connectionString) {
+    const params = {};
+    const pairs = connectionString.split(';');
+
+    for (const pair of pairs) {
+      const [key, value] = pair.split('=').map(s => s.trim());
+      if (key && value) {
+        params[key.toLowerCase()] = value;
+      }
+    }
+
+    // Extract server and port
+    let server = params['server'] || 'localhost';
+    let port = 1433;
+
+    if (server.startsWith('tcp:')) {
+      server = server.substring(4);
+    }
+
+    if (server.includes(',')) {
+      [server, port] = server.split(',');
+      port = parseInt(port);
+    }
+
+    return {
+      server: server,
+      port: port,
+      database: params['database'] || params['initial catalog'],
+      user: params['user id'] || params['uid'],
+      password: params['password'] || params['pwd'],
+      options: {
+        encrypt: true,
+        trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
+        enableArithAbort: true
+      }
+    };
   }
 
   /**
@@ -26,10 +122,16 @@ class SQLExecutor {
    */
   buildConfigFromEnv() {
     // Check if a full connection string is provided
+    console.log("🚀 ~ SQLExecutor ~ buildConfigFromEnv ~ process.env.DB_CONNECTION_STRING:", process.env.DB_CONNECTION_STRING)
     if (process.env.DB_CONNECTION_STRING) {
-      return {
-        connectionString: process.env.DB_CONNECTION_STRING
-      };
+      let parsedConfig = this.parseConnectionString(process.env.DB_CONNECTION_STRING);
+      console.log("🚀 ~ SQLExecutor ~ buildConfigFromEnv ~ parsedConfig:", parsedConfig)
+      if (parsedConfig.server === "localhost") {
+        return {
+          connectionString: process.env.DB_CONNECTION_STRING
+        }
+      }
+      return parsedConfig;
     }
 
     // Validate that DB_DATABASE is provided
@@ -41,15 +143,15 @@ class SQLExecutor {
     }
 
     // Check if using Windows Authentication
-    const useWindowsAuth = process.env.DB_USE_WINDOWS_AUTH === 'true' || 
-                          (!process.env.DB_USER && !process.env.DB_PASSWORD);
+    const useWindowsAuth = process.env.DB_USE_WINDOWS_AUTH === 'true' ||
+      (!process.env.DB_USER && !process.env.DB_PASSWORD);
 
     if (useWindowsAuth) {
       // Build connection string for Windows Authentication
       const server = process.env.DB_SERVER || 'localhost';
       const database = process.env.DB_DATABASE;
       const driver = process.env.DB_DRIVER || 'ODBC Driver 17 for SQL Server';
-      
+
       return {
         connectionString: `Server=${server};Database=${database};Trusted_Connection=yes;TrustServerCertificate=yes;Driver={${driver}}`
       };
@@ -80,9 +182,10 @@ class SQLExecutor {
       }
 
       console.log('[SQL Executor] Connecting to SQL Server...');
+      console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
       this.pool = await sql.connect(this.config);
       console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
-      
+
       return this.pool;
     } catch (err) {
       console.error('[SQL Executor] ❌ Database connection failed:', err.message);
@@ -128,18 +231,7 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error executing query:', error);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: error.message,
-              query: query.substring(0, 200)
-            }, null, 2),
-          },
-        ],
-      };
+      throw error;
     }
   }
 
@@ -172,11 +264,11 @@ class SQLExecutor {
       const result = await request.query(query);
 
       // Get column information
-      const columns = result.recordset && result.recordset.columns 
+      const columns = result.recordset && result.recordset.columns
         ? Object.keys(result.recordset.columns).map(col => ({
-            name: col,
-            type: result.recordset.columns[col].type.declaration
-          }))
+          name: col,
+          type: result.recordset.columns[col].type.declaration
+        }))
         : [];
 
       return {
@@ -209,11 +301,11 @@ class SQLExecutor {
     try {
       // Validate that the query is a DML statement
       const trimmedQuery = query.trim().toUpperCase();
-      const isDML = trimmedQuery.startsWith('INSERT') || 
-                    trimmedQuery.startsWith('UPDATE') || 
-                    trimmedQuery.startsWith('DELETE') || 
-                    trimmedQuery.startsWith('MERGE');
-      
+      const isDML = trimmedQuery.startsWith('INSERT') ||
+        trimmedQuery.startsWith('UPDATE') ||
+        trimmedQuery.startsWith('DELETE') ||
+        trimmedQuery.startsWith('MERGE');
+
       if (!isDML) {
         throw new Error('DML executor only supports INSERT, UPDATE, DELETE, and MERGE statements');
       }
@@ -265,13 +357,13 @@ class SQLExecutor {
     try {
       // Validate that the query is a DDL statement
       const trimmedQuery = query.trim().toUpperCase();
-      const isDDL = trimmedQuery.startsWith('CREATE') || 
-                    trimmedQuery.startsWith('ALTER') || 
-                    trimmedQuery.startsWith('DROP') || 
-                    trimmedQuery.startsWith('TRUNCATE') ||
-                    trimmedQuery.startsWith('RENAME') ||
-                    trimmedQuery.startsWith('COMMENT');
-      
+      const isDDL = trimmedQuery.startsWith('CREATE') ||
+        trimmedQuery.startsWith('ALTER') ||
+        trimmedQuery.startsWith('DROP') ||
+        trimmedQuery.startsWith('TRUNCATE') ||
+        trimmedQuery.startsWith('RENAME') ||
+        trimmedQuery.startsWith('COMMENT');
+
       if (!isDDL) {
         throw new Error('DDL executor only supports CREATE, ALTER, DROP, TRUNCATE, RENAME, and COMMENT statements');
       }
@@ -351,18 +443,7 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error executing procedure:', error);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: error.message,
-              procedure: procedureName
-            }, null, 2),
-          },
-        ],
-      };
+      throw error;
     }
   }
 
@@ -398,17 +479,7 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error getting database info:', error);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: error.message
-            }, null, 2),
-          },
-        ],
-      };
+      throw error;
     }
   }
 
@@ -423,7 +494,7 @@ class SQLExecutor {
       const pool = await this.connect();
 
       const request = pool.request();
-      
+
       let query = `
         SELECT 
           TABLE_SCHEMA,
@@ -457,17 +528,7 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error discovering tables:', error);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: error.message
-            }, null, 2),
-          },
-        ],
-      };
+      throw error;
     }
   }
 
@@ -598,18 +659,7 @@ class SQLExecutor {
 
     } catch (error) {
       console.error('[SQL Executor] Error getting table info:', error);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: error.message,
-              table: `${schema}.${tableName}`
-            }, null, 2),
-          },
-        ],
-      };
+      throw error;
     }
   }
 
