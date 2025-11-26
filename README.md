@@ -110,6 +110,32 @@ The server will be available at `http://localhost:8123/mcp` (or your custom port
 -   **Server-Sent Events (SSE)**: Real-time notifications via GET endpoint
 -   **Stateful Connections**: Maintains session state across requests
 -   **Standard HTTP**: Works with any HTTP client or proxy
+-   **API Key-Based Connection Mapping**: Map different API keys to different database connections (see below)
+
+#### API Key-Based Multi-Database Support
+
+The HTTP transport supports API key-based connection mapping, allowing different clients to connect to different databases using unique API keys.
+
+**Enable API Key Mapping:**
+```bash
+# Set environment variable
+USE_API_KEY_MAPPING=true node index-http.js
+```
+
+**Making Requests with API Keys:**
+```bash
+curl -X POST http://localhost:8123/mcp \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: demo-key-1" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize",...}'
+```
+
+For detailed information about API key mapping, including mock data configuration and migration to database-backed storage, see [API Key Mapping Documentation](docs/API-KEY-MAPPING.md).
+
+**Available Demo API Keys (for testing):**
+- `demo-key-1` → DemoDB1
+- `demo-key-2` → DemoDB2
+- `demo-key-3` → DemoDB3
 
 #### HTTP Endpoints
 
