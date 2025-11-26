@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mssql-mcp-server:
+    build: .
+    container_name: mssql-mcp-server
+    ports:
+      - "8123:8123"
+    environment:
+      # API Key Mapping Configuration
+      - USE_API_KEY_MAPPING=true
+      
+      # Azure Table Storage Configuration (required for API key mapping)
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_TABLE_NAME=${AZURE_TABLE_NAME:-ApiKeyMappings}
+      
+      # Database Configuration (can be overridden by API key mappings)
+      # Method 1: Full Connection String
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+      
+      # Method 2: Individual connection parameters
+      - DB_SERVER=${DB_SERVER:-localhost}
+      - DB_DATABASE=${DB_DATABASE:-ecommerce}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_USE_WINDOWS_AUTH=${DB_USE_WINDOWS_AUTH:-false}
+      - DB_DRIVER=${DB_DRIVER:-ODBC Driver 17 for SQL Server}
+      - DB_ENCRYPT=${DB_ENCRYPT:-false}
+      - DB_TRUST_SERVER_CERTIFICATE=${DB_TRUST_SERVER_CERTIFICATE:-true}
+      
+      # Server Configuration
+      - NODE_ENV=production
+    
+    # Optional: Add volume for persistent logs
+    volumes:
+      - ./logs:/app/logs
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { hostname: 'localhost', port: 8123, path: '/mcp', method: 'GET', timeout: 5000 }; const req = http.request(options, (res) => { if (res.statusCode === 200 || res.statusCode === 400) process.exit(0); else process.exit(1); }); req.on('error', () => process.exit(1)); req.on('timeout', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: If you want to run with a custom port
+  mssql-mcp-server-custom-port:
+    build: .
+    container_name: mssql-mcp-server-custom
+    ports:
+      - "3000:3000"
+    environment:
+      - USE_API_KEY_MAPPING=true
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_TABLE_NAME=${AZURE_TABLE_NAME:-ApiKeyMappings}
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+    command: ["node", "index-http.js", "--port=3000"]
+    profiles:
+      - custom-port
+    restart: unless-stopped

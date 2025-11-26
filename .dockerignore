@@ -1,0 +1,63 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files (keep templates)
+.env
+.env.local
+.env.docker.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep only essential)
+README.md
+DOCKER-README.md
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+docker-compose.*.yml
+
+# Scripts (keep deployment scripts)
+# docker-deploy.sh
+# docker-deploy.ps1
+
+# Test files
+tests/
+test/
+*.test.js
+*.spec.js
+
+# Development tools
+.eslintrc*
+.prettierrc*
+jest.config.*
