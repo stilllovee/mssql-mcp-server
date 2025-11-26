@@ -60,9 +60,9 @@ function buildConnectionStringForWindowsAuth(parsedConfig) {
 
 sql = require('mssql');
 let isWindowsAuth = false;
-const parsedConfig = parseConnectionString(connectionString);
+let parsedConfig
 if (connectionString) {
-
+	parsedConfig = parseConnectionString(connectionString);
 	// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
 	const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") ||
 		parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
