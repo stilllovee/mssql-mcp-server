@@ -245,7 +245,7 @@ class SQLExecutor {
 		// }
 
 		console.log('[SQL Executor] Connecting to SQL Server...');
-		console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
+		// console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
 		this.pool = await (new this.sql.ConnectionPool(this.config)).connect();
 		console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
 
