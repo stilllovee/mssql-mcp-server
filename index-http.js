@@ -10,7 +10,10 @@ const { MCPServerHTTP } = require('./src/server/MCPServerHTTP');
 // Default port
 let PORT = 8123;
 
-// Parse command-line arguments for --port=XXXX
+// API key mapping mode flag (set to true to enable API key-based connection mapping)
+const USE_API_KEY_MAPPING = process.env.USE_API_KEY_MAPPING === 'true' || false;
+
+// Parse command-line arguments for --port=XXXX and --api-key-mode
 for (let i = 2; i < process.argv.length; i++) {
 	const arg = process.argv[i];
 	if (arg.startsWith('--port=')) {
@@ -24,7 +27,15 @@ for (let i = 2; i < process.argv.length; i++) {
 	}
 }
 
-const mcpServer = new MCPServerHTTP();
+// Initialize MCP Server with API key mapping mode
+const mcpServer = new MCPServerHTTP(null, USE_API_KEY_MAPPING);
+
+if (USE_API_KEY_MAPPING) {
+	console.log('[MCP Server] 🔑 API key mapping mode enabled');
+	console.log('[MCP Server] Each request must include "x-api-key" header');
+} else {
+	console.log('[MCP Server] Single connection mode (using environment config)');
+}
 
 const app = express();
 app.use(express.json());

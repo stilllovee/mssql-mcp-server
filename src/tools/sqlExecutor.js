@@ -1,99 +1,104 @@
 
-let sql
-const connectionString = process.env.DB_CONNECTION_STRING;
-function parseConnectionString(connectionString) {
-	const params = {};
-	const pairs = connectionString.split(';');
+// let sql
+// const connectionString = process.env.DB_CONNECTION_STRING;
+// function parseConnectionString(connectionString) {
+// 	const params = {};
+// 	const pairs = connectionString.split(';');
 
-	for (const pair of pairs) {
-		const [key, value] = pair.split('=').map(s => s.trim());
-		if (key && value) {
-			params[key.toLowerCase()] = value;
-		}
-	}
+// 	for (const pair of pairs) {
+// 		const [key, value] = pair.split('=').map(s => s.trim());
+// 		if (key && value) {
+// 			params[key.toLowerCase()] = value;
+// 		}
+// 	}
 
-	// Extract server and port
-	let server = params['server'] || 'localhost';
-	let port = 1433;
+// 	// Extract server and port
+// 	let server = params['server'] || 'localhost';
+// 	let port = 1433;
 
-	if (server.startsWith('tcp:')) {
-		server = server.substring(4);
-	}
+// 	if (server.startsWith('tcp:')) {
+// 		server = server.substring(4);
+// 	}
 
-	if (server.includes(',')) {
-		[server, port] = server.split(',');
-		port = parseInt(port);
-	}
+// 	if (server.includes(',')) {
+// 		[server, port] = server.split(',');
+// 		port = parseInt(port);
+// 	}
 
-	return {
-		server: server,
-		port: port,
-		database: params['database'] || params['initial catalog'],
-		user: params['user id'] || params['uid'],
-		password: params['password'] || params['pwd'],
-		driver: params['driver'],
-		trustedConnection: params['trusted_connection'] === 'yes' || params['trusted_connection'] === 'Yes',
-		options: {
-			encrypt: true,
-			trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
-			enableArithAbort: true
-		}
-	};
-}
+// 	return {
+// 		server: server,
+// 		port: port,
+// 		database: params['database'] || params['initial catalog'],
+// 		user: params['user id'] || params['uid'],
+// 		password: params['password'] || params['pwd'],
+// 		driver: params['driver'],
+// 		trustedConnection: params['trusted_connection'] === 'yes' || params['trusted_connection'] === 'Yes',
+// 		options: {
+// 			encrypt: true,
+// 			trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
+// 			enableArithAbort: true
+// 		}
+// 	};
+// }
 
-function buildConnectionStringForWindowsAuth(parsedConfig) {
-	const driver = parsedConfig.driver || 'ODBC Driver 17 for SQL Server';
-	let connStr = `Driver={${driver}};Server=${parsedConfig.server}`;
+// function buildConnectionStringForWindowsAuth(parsedConfig) {
+// 	const driver = parsedConfig.driver || 'ODBC Driver 17 for SQL Server';
+// 	let connStr = `Driver={${driver}};Server=${parsedConfig.server}`;
 
-	if (parsedConfig.database) {
-		connStr += `;Database=${parsedConfig.database}`;
-	}
+// 	if (parsedConfig.database) {
+// 		connStr += `;Database=${parsedConfig.database}`;
+// 	}
 
-	connStr += `;Trusted_Connection=yes`;
+// 	connStr += `;Trusted_Connection=yes`;
 
-	if (parsedConfig.options.trustServerCertificate) {
-		connStr += `;TrustServerCertificate=yes`;
-	}
+// 	if (parsedConfig.options.trustServerCertificate) {
+// 		connStr += `;TrustServerCertificate=yes`;
+// 	}
 
-	return connStr;
-}
+// 	return connStr;
+// }
 
-sql = require('mssql');
-let isWindowsAuth = false;
-let parsedConfig
-if (connectionString) {
-	parsedConfig = parseConnectionString(connectionString);
-	// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
-	const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") ||
-		parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
-		parsedConfig.server.includes("\\");
-	isWindowsAuth = (!parsedConfig.user && !parsedConfig.password) && isLocalServer;
+// sql = require('mssql');
+// let isWindowsAuth = false;
+// let parsedConfig
+// if (connectionString) {
+// 	parsedConfig = parseConnectionString(connectionString);
+// 	// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
+// 	const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") ||
+// 		parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
+// 		parsedConfig.server.includes("\\");
+// 	isWindowsAuth = (!parsedConfig.user && !parsedConfig.password) && isLocalServer;
 
-}
+// }
 
-if (process.env.DB_USE_WINDOWS_AUTH === 'true') {
-	isWindowsAuth = true;
-}
+// if (process.env.DB_USE_WINDOWS_AUTH === 'true') {
+// 	isWindowsAuth = true;
+// }
 
-if (isWindowsAuth) {
-	console.log("using windows auth driver (msnodesqlv8)");
-	sql = require('mssql/msnodesqlv8');
-}
+// if (isWindowsAuth) {
+// 	console.log("using windows auth driver (msnodesqlv8)");
+// 	sql = require('mssql/msnodesqlv8');
+// }
 /**
  * SQL Server executor functionality
  */
 class SQLExecutor {
 	constructor(config = null) {
+		// Initialize sql module per instance - CRITICAL for multiple connections
+		this.sql = require('mssql');
+		
 		// Check if using Windows Authentication
 
 		// If config is a string, treat it as a connection string
 		if (typeof config === 'string') {
+			const parsedConfig = this.parseConnectionString(config);
 			const isWindowsAuth = !parsedConfig.user && !parsedConfig.password;
 			if (isWindowsAuth) {
 				// Rebuild connection string with Driver parameter for msnodesqlv8
 				this.config = {
-					connectionString: buildConnectionStringForWindowsAuth(parsedConfig)
+					connectionString: this.buildConnectionStringForWindowsAuth(parsedConfig)
 				};
+				this.sql = require('mssql/msnodesqlv8');
 			} else {
 				this.config = parsedConfig;
 			}
@@ -110,6 +115,63 @@ class SQLExecutor {
 		this.pool = null;
 	}
 
+	parseConnectionString(connectionString) {
+		const params = {};
+		const pairs = connectionString.split(';');
+
+		for (const pair of pairs) {
+			const [key, value] = pair.split('=').map(s => s.trim());
+			if (key && value) {
+				params[key.toLowerCase()] = value;
+			}
+		}
+
+		// Extract server and port
+		let server = params['server'] || 'localhost';
+		let port = 1433;
+
+		if (server.startsWith('tcp:')) {
+			server = server.substring(4);
+		}
+
+		if (server.includes(',')) {
+			[server, port] = server.split(',');
+			port = parseInt(port);
+		}
+
+		return {
+			server: server,
+			port: port,
+			database: params['database'] || params['initial catalog'],
+			user: params['user id'] || params['uid'],
+			password: params['password'] || params['pwd'],
+			driver: params['driver'],
+			trustedConnection: params['trusted_connection'] === 'yes' || params['trusted_connection'] === 'Yes',
+			options: {
+				encrypt: true,
+				trustServerCertificate: params['trustservercertificate'] === 'True' || params['trustservercertificate'] === 'true',
+				enableArithAbort: true
+			}
+		};
+	}
+
+	buildConnectionStringForWindowsAuth(parsedConfig) {
+		const driver = parsedConfig.driver || 'ODBC Driver 17 for SQL Server';
+		let connStr = `Driver={${driver}};Server=${parsedConfig.server}`;
+
+		if (parsedConfig.database) {
+			connStr += `;Database=${parsedConfig.database}`;
+		}
+
+		connStr += `;Trusted_Connection=yes`;
+
+		if (parsedConfig.options.trustServerCertificate) {
+			connStr += `;TrustServerCertificate=yes`;
+		}
+
+		return connStr;
+	}
+
 	/**
 	 * Build database configuration from environment variables
 	 */
@@ -117,10 +179,12 @@ class SQLExecutor {
 		// Check if a full connection string is provided
 		if (process.env.DB_CONNECTION_STRING) {
 			// Check if using Windows Authentication
+			const parsedConfig = this.parseConnectionString(process.env.DB_CONNECTION_STRING);
 			const isWindowsAuth = !parsedConfig.user && !parsedConfig.password;
 			if (isWindowsAuth) {
+				this.sql = require('mssql/msnodesqlv8');
 				return {
-					connectionString: buildConnectionStringForWindowsAuth(parsedConfig)
+					connectionString: this.buildConnectionStringForWindowsAuth(parsedConfig)
 				};
 			}
 			return parsedConfig;
@@ -172,8 +236,17 @@ class SQLExecutor {
 			return this.pool;
 		}
 
+		// const isWindowsAuth =
+		// 	(this.config.connectionString && !this.config.connectionString.includes('User ID') && !this.config.connectionString.includes('Password'))
+		// 	|| (!this.config.user && !this.config.password);
+		// console.log("🚀 ~ SQLExecutor ~ connect ~ isWindowsAuth:", isWindowsAuth)
+		// if (isWindowsAuth) {
+		// 	this.sql = require('mssql/msnodesqlv8');
+		// }
+
 		console.log('[SQL Executor] Connecting to SQL Server...');
-		this.pool = await sql.connect(this.config);
+		console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
+		this.pool = await (new this.sql.ConnectionPool(this.config)).connect();
 		console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
 
 		return this.pool;

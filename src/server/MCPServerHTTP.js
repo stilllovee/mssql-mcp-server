@@ -11,10 +11,42 @@ const { SQLExecutor } = require('../tools/sqlExecutor');
 const { TOOL_DEFINITIONS } = require('../tools/toolDefinitions');
 
 const SESSION_ID_HEADER_NAME = 'mcp-session-id';
+const API_KEY_HEADER_NAME = 'x-api-key';
 const JSON_RPC = '2.0';
 
+// Mock API key to connection configuration mapping
+// TODO: Replace with real database lookup in the future
+const API_KEY_CONNECTION_MAP = {
+	'demo-key-1': {
+		server: 'azsql1',
+		database: 'dbname',
+		user: 'something',
+		port: 1433,
+		password: 'your_password_here',
+		trustedConnection: false,
+		options: {
+			encrypt: true,
+			trustServerCertificate: true,
+			enableArithAbort: true
+		}
+	},
+	'demo-key-2': {
+		server: 'azsql2',
+		database: 'dbname',
+		user: 'something',
+		port: 1433,
+		password: 'your_password_here',
+		trustedConnection: false,
+		options: {
+			encrypt: true,
+			trustServerCertificate: true,
+			enableArithAbort: true
+		}
+	},
+};
+
 class MCPServerHTTP {
-	constructor(dbConfig = null) {
+	constructor(dbConfig = null, useApiKeyMapping = false) {
 		this.server = new Server(
 			{
 				name: 'mssql-mcp-server',
@@ -31,11 +63,55 @@ class MCPServerHTTP {
 		// To support multiple simultaneous connections
 		this.transports = {};
 
-		// Initialize database with optional config
-		this.sqlExecutor = new SQLExecutor(dbConfig);
+		// API key mapping mode
+		this.useApiKeyMapping = useApiKeyMapping;
+		console.log("🚀 ~ MCPServerHTTP ~ constructor ~ useApiKeyMapping:", useApiKeyMapping)
+		// Store SQL executors per API key
+		this.sqlExecutors = {};
+
+		// Initialize database with optional config (only used when API key mapping is disabled)
+		if (!useApiKeyMapping) {
+			console.log("🚀 ~ MCPServerHTTP ~ constructor ~ dbConfig:", dbConfig)
+			this.sqlExecutor = new SQLExecutor(dbConfig);
+		}
 
 		this.setupToolHandlers();
 		this.setupErrorHandling();
+	}
+
+	/**
+	 * Validate API key and get or create SQL executor for it
+	 */
+	getSQLExecutorForApiKey(apiKey) {
+		if (!apiKey) {
+			throw new Error('API key is required');
+		}
+
+		// Check if API key exists in mock mapping
+		const dbConfig = API_KEY_CONNECTION_MAP[apiKey];
+		if (!dbConfig) {
+			throw new Error('Invalid API key');
+		}
+
+		// Return existing executor or create new one
+		if (!this.sqlExecutors[apiKey]) {
+			console.log(`[MCP Server] Creating SQL executor for API key: ${apiKey}`);
+			console.log("🚀 ~ MCPServerHTTP ~ getSQLExecutorForApiKey ~ dbConfig:", dbConfig)
+			this.sqlExecutors[apiKey] = new SQLExecutor(dbConfig);
+		}
+
+		return this.sqlExecutors[apiKey];
+	}
+
+	/**
+	 * Get the appropriate SQL executor based on mode
+	 */
+	getSQLExecutor(req) {
+		if (this.useApiKeyMapping) {
+			const apiKey = req.headers[API_KEY_HEADER_NAME];
+			return this.getSQLExecutorForApiKey(apiKey);
+		}
+		return this.sqlExecutor;
 	}
 
 	async handleGetRequest(req, res) {
@@ -56,9 +132,34 @@ class MCPServerHTTP {
 		let transport;
 
 		try {
+			// Validate API key if in API key mapping mode
+			if (this.useApiKeyMapping) {
+				const apiKey = req.headers[API_KEY_HEADER_NAME];
+				if (!apiKey) {
+					res.status(401).json(this.createErrorResponse('Unauthorized: API key is required'));
+					return;
+				}
+
+				try {
+					this.getSQLExecutorForApiKey(apiKey);
+				} catch (error) {
+					res.status(401).json(this.createErrorResponse(`Unauthorized: ${error.message}`));
+					return;
+				}
+
+				// Store current API key for this request
+				this.currentApiKey = apiKey;
+			}
+
 			// Reuse existing transport
 			if (sessionId && this.transports[sessionId]) {
 				transport = this.transports[sessionId];
+
+				// Update current API key from transport if available
+				if (this.useApiKeyMapping && transport.apiKey) {
+					this.currentApiKey = transport.apiKey;
+				}
+
 				await transport.handleRequest(req, res, req.body);
 				return;
 			}
@@ -68,6 +169,11 @@ class MCPServerHTTP {
 				transport = new StreamableHTTPServerTransport({
 					sessionIdGenerator: () => randomUUID(),
 				});
+
+				// Store API key in transport for later use
+				if (this.useApiKeyMapping) {
+					transport.apiKey = req.headers[API_KEY_HEADER_NAME];
+				}
 
 				await this.server.connect(transport);
 				await transport.handleRequest(req, res, req.body);
@@ -95,8 +201,17 @@ class MCPServerHTTP {
 	async cleanup() {
 		console.log('[MCP Server] Cleaning up...');
 		await this.server.close();
+
+		// Close single SQL executor if not using API key mapping
 		if (this.sqlExecutor) {
 			await this.sqlExecutor.close();
+		}
+
+		// Close all SQL executors in API key mapping mode
+		if (this.useApiKeyMapping) {
+			for (const apiKey in this.sqlExecutors) {
+				await this.sqlExecutors[apiKey].close();
+			}
 		}
 	}
 
@@ -111,44 +226,77 @@ class MCPServerHTTP {
 		// Handle tool calls
 		this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			const { name, arguments: args } = request.params;
+			let sqlExecutor;
+
 			try {
+				// Get the appropriate SQL executor based on the mode
+				if (this.useApiKeyMapping) {
+					const apiKey = this.currentApiKey;
+					if (!apiKey) {
+						throw new Error('No API key found for this request');
+					}
+
+					// Get connection config for this API key
+					const connectionConfig = API_KEY_CONNECTION_MAP[apiKey];
+					if (!connectionConfig) {
+						throw new Error(`No database configuration found for API key: ${apiKey}`);
+					}
+
+					// Create a NEW SQL executor for EACH request to ensure proper transport binding
+					console.log(`[MCP Server] Creating new SQL executor for API key: ${apiKey}, tool: ${name}`);
+					sqlExecutor = new SQLExecutor(connectionConfig);
+				} else {
+					sqlExecutor = this.sqlExecutor;
+				}
+
+				let result;
+
 				if (name === 'sql_execute_query') {
-					return await this.sqlExecutor.executeQuery(args.query, args.params || {});
+					result = await sqlExecutor.executeQuery(args.query, args.params || {});
+				} else if (name === 'sql_execute_dql') {
+					result = await sqlExecutor.executeDQL(args.query, args.params || {});
+				} else if (name === 'sql_execute_dml') {
+					result = await sqlExecutor.executeDML(args.query, args.params || {});
+				} else if (name === 'sql_execute_ddl') {
+					result = await sqlExecutor.executeDDL(args.query, args.params || {});
+				} else if (name === 'sql_execute_procedure') {
+					result = await sqlExecutor.executeProcedure(args.procedure_name, args.params || {});
+				} else if (name === 'sql_get_database_info') {
+					result = await sqlExecutor.getDatabaseInfo();
+				} else if (name === 'sql_discover_tables') {
+					result = await sqlExecutor.discoverTables(args.schema || null);
+				} else if (name === 'sql_get_table_info') {
+					result = await sqlExecutor.getTableInfo(args.table_name, args.schema || 'dbo');
+				} else {
+					throw new Error(`Unknown tool: ${name}`);
 				}
 
-				if (name === 'sql_execute_dql') {
-					return await this.sqlExecutor.executeDQL(args.query, args.params || {});
+				// Close the connection after request when using API key mapping
+				if (this.useApiKeyMapping && sqlExecutor) {
+					try {
+						await sqlExecutor.close();
+						console.log(`[MCP Server] Closed SQL executor connection after tool: ${name}`);
+					} catch (closeError) {
+						console.error('[MCP Server] Error closing SQL executor:', closeError);
+					}
 				}
 
-				if (name === 'sql_execute_dml') {
-					return await this.sqlExecutor.executeDML(args.query, args.params || {});
-				}
+				return result;
 
-				if (name === 'sql_execute_ddl') {
-					return await this.sqlExecutor.executeDDL(args.query, args.params || {});
-				}
-
-				if (name === 'sql_execute_procedure') {
-					return await this.sqlExecutor.executeProcedure(args.procedure_name, args.params || {});
-				}
-
-				if (name === 'sql_get_database_info') {
-					return await this.sqlExecutor.getDatabaseInfo();
-				}
-
-				if (name === 'sql_discover_tables') {
-					return await this.sqlExecutor.discoverTables(args.schema || null);
-				}
-
-				if (name === 'sql_get_table_info') {
-					return await this.sqlExecutor.getTableInfo(args.table_name, args.schema || 'dbo');
-				}
 			} catch (error) {
 				console.error(`[MCP Server] Error executing tool ${name}:`, error);
+
+				// Close connection on error too
+				if (this.useApiKeyMapping && sqlExecutor) {
+					try {
+						await sqlExecutor.close();
+					} catch (closeError) {
+						// Ignore close errors during error handling
+					}
+				}
+
 				throw new Error(`Tool execution failed: ${error.message}`);
 			}
-
-			throw new Error(`Unknown tool: ${name}`);
 		});
 	}
 
