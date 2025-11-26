@@ -85,6 +85,7 @@ For web applications, remote connections, and environments where HTTP is preferr
 #### Start the HTTP Server
 
 Setup .env file with your database configuration:
+
 ```ini
 DB_SERVER=localhost
 DB_DATABASE=ecommerce
@@ -92,6 +93,7 @@ DB_USE_WINDOWS_AUTH=true
 # Or use a full connection string
 # DB_CONNECTION_STRING=Server=localhost;Database=ecommerce;Trusted_Connection=yes;TrustServerCertificate=yes
 ```
+
 Run the server:
 
 ```bash
@@ -117,12 +119,26 @@ The server will be available at `http://localhost:8123/mcp` (or your custom port
 The HTTP transport supports API key-based connection mapping, allowing different clients to connect to different databases using unique API keys.
 
 **Enable API Key Mapping:**
+
 ```bash
 # Set environment variable
 USE_API_KEY_MAPPING=true node index-http.js
 ```
 
+**Using HTTP Mode:**
+
+```json
+"mssql": {
+    "type": "http",
+    "url": "http://localhost:8123/mcp",
+    "headers": {
+        "x-api-key": "demo-key-uat"//add this if using API key mapping
+    }
+},
+```
+
 **Making Requests with API Keys:**
+
 ```bash
 curl -X POST http://localhost:8123/mcp \
   -H "Content-Type: application/json" \
@@ -133,9 +149,10 @@ curl -X POST http://localhost:8123/mcp \
 For detailed information about API key mapping, including mock data configuration and migration to database-backed storage, see [API Key Mapping Documentation](docs/API-KEY-MAPPING.md).
 
 **Available Demo API Keys (for testing):**
-- `demo-key-1` → DemoDB1
-- `demo-key-2` → DemoDB2
-- `demo-key-3` → DemoDB3
+
+-   `demo-key-1` → DemoDB1
+-   `demo-key-2` → DemoDB2
+-   `demo-key-3` → DemoDB3
 
 #### HTTP Endpoints
 
