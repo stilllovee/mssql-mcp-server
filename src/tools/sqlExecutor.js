@@ -86,7 +86,7 @@ class SQLExecutor {
 	constructor(config = null) {
 		// Initialize sql module per instance - CRITICAL for multiple connections
 		this.sql = require('mssql');
-		
+
 		// Check if using Windows Authentication
 
 		// If config is a string, treat it as a connection string
@@ -207,6 +207,7 @@ class SQLExecutor {
 			const server = process.env.DB_SERVER || 'localhost';
 			const database = process.env.DB_DATABASE;
 			const driver = process.env.DB_DRIVER || 'ODBC Driver 17 for SQL Server';
+			this.sql = require('mssql/msnodesqlv8');
 
 			return {
 				connectionString: `Server=${server};Database=${database};Trusted_Connection=yes;TrustServerCertificate=yes;Driver={${driver}}`

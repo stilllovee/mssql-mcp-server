@@ -36,8 +36,7 @@ Add to your Claude Desktop configuration:
             "args": ["/path/to/project"],
             "env": {
                 "DB_SERVER": "localhost",
-                "DB_DATABASE": "ecommerce",
-                "DB_USE_WINDOWS_AUTH": "true"
+                "DB_DATABASE": "ecommerce"
             }
         }
     }
@@ -70,8 +69,7 @@ Or run directly with npx:
             "args": ["github:stilllovee/mssql-mcp-server"],
             "env": {
                 "DB_SERVER": "localhost",
-                "DB_DATABASE": "ecommerce",
-                "DB_USE_WINDOWS_AUTH": "true"
+                "DB_DATABASE": "ecommerce"
             }
         }
     }
