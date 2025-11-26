@@ -1,5 +1,5 @@
-# Use Node.js 20 base image (required by Azure packages)
-FROM node:20-alpine
+# Use Node.js 24 base image (required by Azure packages)
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
