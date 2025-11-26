@@ -60,18 +60,18 @@ function buildConnectionStringForWindowsAuth(parsedConfig) {
 
 sql = require('mssql');
 let isWindowsAuth = false;
+const parsedConfig = parseConnectionString(connectionString);
 if (connectionString) {
-	const parsedConfig = parseConnectionString(connectionString);
 
 	// Check if using Windows Authentication (Trusted_Connection=yes and no user/password)
 	const isLocalServer = parsedConfig.server.toLowerCase().includes("localhost") ||
-	parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
-	parsedConfig.server.includes("\\");
+		parsedConfig.server.toLowerCase().includes("127.0.0.1") ||
+		parsedConfig.server.includes("\\");
 	isWindowsAuth = (!parsedConfig.user && !parsedConfig.password) && isLocalServer;
 
 }
 
-if(process.env.DB_USE_WINDOWS_AUTH === 'true') {
+if (process.env.DB_USE_WINDOWS_AUTH === 'true') {
 	isWindowsAuth = true;
 }
 
@@ -221,7 +221,34 @@ class SQLExecutor {
 	 */
 	async executeDQL(query, params = {}) {
 		// Validate that the query is a SELECT statement
-		const trimmedQuery = query.trim().toUpperCase();
+		const stripLeadingComments = (q) => {
+			let s = q.replace(/^\uFEFF/, '');
+			while (true) {
+				// Trim any leading whitespace/newlines before checking for comments
+				s = s.trimStart();
+				if (s.startsWith('--')) {
+					const nl = s.indexOf('\n');
+					if (nl === -1) {
+						return '';
+					}
+					s = s.slice(nl + 1);
+					continue;
+				}
+				if (s.startsWith('/*')) {
+					const endIdx = s.indexOf('*/');
+					if (endIdx === -1) {
+						return '';
+					}
+					s = s.slice(endIdx + 2);
+					continue;
+				}
+				break;
+			}
+			return s;
+		};
+
+		const effective = stripLeadingComments(query);
+		const trimmedQuery = effective.trim().toUpperCase();
 		if (!trimmedQuery.startsWith('SELECT') && !trimmedQuery.startsWith('WITH')) {
 			throw new Error('DQL executor only supports SELECT queries (queries starting with SELECT or WITH for CTEs)');
 		}
