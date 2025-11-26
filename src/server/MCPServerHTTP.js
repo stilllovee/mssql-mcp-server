@@ -14,39 +14,8 @@ const SESSION_ID_HEADER_NAME = 'mcp-session-id';
 const API_KEY_HEADER_NAME = 'x-api-key';
 const JSON_RPC = '2.0';
 
-// Mock API key to connection configuration mapping
-// TODO: Replace with real database lookup in the future
-const API_KEY_CONNECTION_MAP = {
-	'demo-key-1': {
-		server: 'azsql1',
-		database: 'dbname',
-		user: 'something',
-		port: 1433,
-		password: 'your_password_here',
-		trustedConnection: false,
-		options: {
-			encrypt: true,
-			trustServerCertificate: true,
-			enableArithAbort: true
-		}
-	},
-	'demo-key-2': {
-		server: 'azsql2',
-		database: 'dbname',
-		user: 'something',
-		port: 1433,
-		password: 'your_password_here',
-		trustedConnection: false,
-		options: {
-			encrypt: true,
-			trustServerCertificate: true,
-			enableArithAbort: true
-		}
-	},
-};
-
 class MCPServerHTTP {
-	constructor(dbConfig = null, useApiKeyMapping = false) {
+	constructor(dbConfig = null, useApiKeyMapping = false, azureTableService = null) {
 		this.server = new Server(
 			{
 				name: 'mssql-mcp-server',
@@ -66,6 +35,10 @@ class MCPServerHTTP {
 		// API key mapping mode
 		this.useApiKeyMapping = useApiKeyMapping;
 		console.log("🚀 ~ MCPServerHTTP ~ constructor ~ useApiKeyMapping:", useApiKeyMapping)
+		
+		// Azure Table Storage service for API key mappings
+		this.azureTableService = azureTableService;
+		
 		// Store SQL executors per API key
 		this.sqlExecutors = {};
 
@@ -82,13 +55,17 @@ class MCPServerHTTP {
 	/**
 	 * Validate API key and get or create SQL executor for it
 	 */
-	getSQLExecutorForApiKey(apiKey) {
+	async getSQLExecutorForApiKey(apiKey) {
 		if (!apiKey) {
 			throw new Error('API key is required');
 		}
 
-		// Check if API key exists in mock mapping
-		const dbConfig = API_KEY_CONNECTION_MAP[apiKey];
+		// Get database configuration from Azure Table Storage
+		if (!this.azureTableService) {
+			throw new Error('Azure Table Storage service not configured');
+		}
+
+		const dbConfig = await this.azureTableService.getConnectionConfig(apiKey);
 		if (!dbConfig) {
 			throw new Error('Invalid API key');
 		}
@@ -106,10 +83,10 @@ class MCPServerHTTP {
 	/**
 	 * Get the appropriate SQL executor based on mode
 	 */
-	getSQLExecutor(req) {
+	async getSQLExecutor(req) {
 		if (this.useApiKeyMapping) {
 			const apiKey = req.headers[API_KEY_HEADER_NAME];
-			return this.getSQLExecutorForApiKey(apiKey);
+			return await this.getSQLExecutorForApiKey(apiKey);
 		}
 		return this.sqlExecutor;
 	}
@@ -141,7 +118,7 @@ class MCPServerHTTP {
 				}
 
 				try {
-					this.getSQLExecutorForApiKey(apiKey);
+					await this.getSQLExecutorForApiKey(apiKey);
 				} catch (error) {
 					res.status(401).json(this.createErrorResponse(`Unauthorized: ${error.message}`));
 					return;
@@ -236,8 +213,8 @@ class MCPServerHTTP {
 						throw new Error('No API key found for this request');
 					}
 
-					// Get connection config for this API key
-					const connectionConfig = API_KEY_CONNECTION_MAP[apiKey];
+					// Get connection config for this API key from Azure Table Storage
+					const connectionConfig = await this.azureTableService.getConnectionConfig(apiKey);
 					if (!connectionConfig) {
 						throw new Error(`No database configuration found for API key: ${apiKey}`);
 					}

@@ -116,23 +116,27 @@ The server will be available at `http://localhost:8123/mcp` (or your custom port
 
 #### API Key-Based Multi-Database Support
 
-The HTTP transport supports API key-based connection mapping, allowing different clients to connect to different databases using unique API keys.
+The HTTP transport supports API key-based connection mapping using **Azure Table Storage**, allowing different clients to connect to different databases using unique API keys.
 
 **Enable API Key Mapping:**
 
 ```bash
-# Set environment variable
-USE_API_KEY_MAPPING=true node index-http.js
+# Set environment variables
+USE_API_KEY_MAPPING=true
+AZURE_STORAGE_CONNECTION_STRING=your_azure_connection_string
+
+# Start the server
+node index-http.js
 ```
 
-**Using HTTP Mode:**
+**Configure in Claude Desktop:**
 
 ```json
 "mssql": {
     "type": "http",
     "url": "http://localhost:8123/mcp",
     "headers": {
-        "x-api-key": "demo-key-uat"//add this if using API key mapping
+        "x-api-key": "your-api-key"
     }
 },
 ```
@@ -142,17 +146,24 @@ USE_API_KEY_MAPPING=true node index-http.js
 ```bash
 curl -X POST http://localhost:8123/mcp \
   -H "Content-Type: application/json" \
-  -H "x-api-key: demo-key-1" \
+  -H "x-api-key: your-api-key" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize",...}'
 ```
 
-For detailed information about API key mapping, including mock data configuration and migration to database-backed storage, see [API Key Mapping Documentation](docs/API-KEY-MAPPING.md).
+**Managing API Keys:**
 
-**Available Demo API Keys (for testing):**
+```bash
+# List all API keys
+node scripts/manage-api-keys.js list
 
--   `demo-key-1` → DemoDB1
--   `demo-key-2` → DemoDB2
--   `demo-key-3` → DemoDB3
+# Add a new API key
+node scripts/manage-api-keys.js add my-api-key
+
+# Delete an API key
+node scripts/manage-api-keys.js delete my-api-key
+```
+
+For detailed information about Azure Table Storage setup, API key management, and security best practices, see [Azure Table Storage Documentation](docs/AZURE-TABLE-STORAGE.md).
 
 #### HTTP Endpoints
 
@@ -172,6 +183,9 @@ For detailed information about API key mapping, including mock data configuratio
 | `DB_DRIVER`                   | ODBC driver name                                      | `ODBC Driver 17 for SQL Server`   |
 | `DB_ENCRYPT`                  | Enable connection encryption                          | `false`                           |
 | `DB_TRUST_SERVER_CERTIFICATE` | Trust server certificate                              | `true`                            |
+| `USE_API_KEY_MAPPING`         | Enable API key-based connection mapping               | `false`                           |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure Table Storage connection string (required for API key mapping) | -                     |
+| `AZURE_TABLE_NAME`            | Azure Table name for API key mappings                 | `ApiKeyMappings`                  |
 
 ### Available Tools
 
