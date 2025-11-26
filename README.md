@@ -9,6 +9,8 @@ Model Context Protocol (MCP) server for Microsoft SQL Server database operations
 -   Get database connection information
 -   Support for both Windows Authentication and SQL Server Authentication
 -   Flexible configuration via environment variables
+-   **Streamable HTTP transport** for web-based applications and remote connections
+-   Support for multiple simultaneous sessions
 
 ## Installation
 
@@ -17,6 +19,12 @@ npm install
 ```
 
 ## Usage
+
+The server supports two transport modes:
+
+### 1. Stdio Transport (Default)
+
+For use with Claude Desktop and other stdio-based MCP clients.
 
 Add to your Claude Desktop configuration:
 
@@ -70,13 +78,51 @@ Or run directly with npx:
 }
 ```
 
+### 2. Streamable HTTP Transport
+
+For web applications, remote connections, and environments where HTTP is preferred.
+
+#### Start the HTTP Server
+
+Setup .env file with your database configuration:
+```ini
+DB_SERVER=localhost
+DB_DATABASE=ecommerce
+DB_USE_WINDOWS_AUTH=true
+# Or use a full connection string
+# DB_CONNECTION_STRING=Server=localhost;Database=ecommerce;Trusted_Connection=yes;TrustServerCertificate=yes
+```
+Run the server:
+
+```bash
+# Using default port 8123
+node index-http.js
+
+# Or specify a custom port
+node index-http.js --port=3000
+```
+
+The server will be available at `http://localhost:8123/mcp` (or your custom port).
+
+#### HTTP Transport Features
+
+-   **Session Management**: Supports multiple simultaneous client connections with unique session IDs
+-   **Server-Sent Events (SSE)**: Real-time notifications via GET endpoint
+-   **Stateful Connections**: Maintains session state across requests
+-   **Standard HTTP**: Works with any HTTP client or proxy
+
+#### HTTP Endpoints
+
+-   `POST /mcp` - Send MCP requests and receive responses
+-   `GET /mcp` - Establish SSE connection for receiving notifications (requires `mcp-session-id` header)
+
 ### Available Environment Variables
 
 | Variable                      | Description                                           | Default                           |
 | ----------------------------- | ----------------------------------------------------- | --------------------------------- |
 | `DB_CONNECTION_STRING`        | Full connection string (overrides all other settings) | -                                 |
 | `DB_SERVER`                   | SQL Server hostname or IP                             | `localhost`                       |
-| `DB_DATABASE`                 | Database name                                         | `ecommerce`                              |
+| `DB_DATABASE`                 | Database name                                         | `ecommerce`                       |
 | `DB_USER`                     | Username for SQL Server Authentication                | -                                 |
 | `DB_PASSWORD`                 | Password for SQL Server Authentication                | -                                 |
 | `DB_USE_WINDOWS_AUTH`         | Use Windows Authentication                            | `true` (if user/password not set) |
