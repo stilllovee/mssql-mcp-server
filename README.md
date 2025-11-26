@@ -9,6 +9,7 @@ Model Context Protocol (MCP) server for Microsoft SQL Server database operations
 -   Get database connection information
 -   Support for both Windows Authentication and SQL Server Authentication
 -   Flexible configuration via environment variables
+-   **Support for both stdio and SSE (Server-Sent Events) transports**
 
 ## Installation
 
@@ -17,6 +18,8 @@ npm install
 ```
 
 ## Usage
+
+### Stdio Transport (Default)
 
 Add to your Claude Desktop configuration:
 
@@ -70,6 +73,35 @@ Or run directly with npx:
 }
 ```
 
+### SSE Transport (Server-Sent Events)
+
+To run the server with SSE transport, use the `--sse` flag:
+
+```bash
+# Start with SSE transport on default port 3000
+node index.js --sse
+
+# Or with npm script
+npm run start:sse
+
+# Specify a custom port
+node index.js --sse --port 8080
+
+# Or use environment variables
+MCP_TRANSPORT=sse MCP_PORT=8080 node index.js
+```
+
+When running in SSE mode, the server exposes the following endpoints:
+
+-   `GET /sse` - Establishes the SSE connection stream
+-   `POST /messages?sessionId=<id>` - Receives JSON-RPC messages from clients
+-   `GET /health` - Health check endpoint
+
+Example client connection flow:
+1. Connect to `GET /sse` to establish SSE stream
+2. Receive endpoint event with session ID: `event: endpoint\ndata: /messages?sessionId=<uuid>\n\n`
+3. Send JSON-RPC messages to the received endpoint via POST
+
 ### Available Environment Variables
 
 | Variable                      | Description                                           | Default                           |
@@ -83,6 +115,8 @@ Or run directly with npx:
 | `DB_DRIVER`                   | ODBC driver name                                      | `ODBC Driver 17 for SQL Server`   |
 | `DB_ENCRYPT`                  | Enable connection encryption                          | `false`                           |
 | `DB_TRUST_SERVER_CERTIFICATE` | Trust server certificate                              | `true`                            |
+| `MCP_TRANSPORT`               | Transport mode (`stdio` or `sse`)                     | `stdio`                           |
+| `MCP_PORT`                    | Port for SSE server                                   | `3000`                            |
 
 ### Available Tools
 
