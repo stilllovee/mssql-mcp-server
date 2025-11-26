@@ -302,8 +302,31 @@ class SQLExecutor {
 	 * This method is optimized for data modification operations with validation
 	 */
 	async executeDML(query, params = {}) {
+		// Helper to strip leading comments
+		const stripLeadingComments = (q) => {
+			let s = q.replace(/^\uFEFF/, '');
+			while (true) {
+				s = s.trimStart();
+				if (s.startsWith('--')) {
+					const nl = s.indexOf('\n');
+					if (nl === -1) return '';
+					s = s.slice(nl + 1);
+					continue;
+				}
+				if (s.startsWith('/*')) {
+					const endIdx = s.indexOf('*/');
+					if (endIdx === -1) return '';
+					s = s.slice(endIdx + 2);
+					continue;
+				}
+				break;
+			}
+			return s;
+		};
+
 		// Validate that the query is a DML statement
-		const trimmedQuery = query.trim().toUpperCase();
+		const effective = stripLeadingComments(query);
+		const trimmedQuery = effective.trim().toUpperCase();
 		const isDML = trimmedQuery.startsWith('INSERT') ||
 			trimmedQuery.startsWith('UPDATE') ||
 			trimmedQuery.startsWith('DELETE') ||
@@ -351,8 +374,31 @@ class SQLExecutor {
 	 * WARNING: Use with caution as DDL operations can modify or destroy database structure
 	 */
 	async executeDDL(query, params = {}) {
+		// Helper to strip leading comments
+		const stripLeadingComments = (q) => {
+			let s = q.replace(/^\uFEFF/, '');
+			while (true) {
+				s = s.trimStart();
+				if (s.startsWith('--')) {
+					const nl = s.indexOf('\n');
+					if (nl === -1) return '';
+					s = s.slice(nl + 1);
+					continue;
+				}
+				if (s.startsWith('/*')) {
+					const endIdx = s.indexOf('*/');
+					if (endIdx === -1) return '';
+					s = s.slice(endIdx + 2);
+					continue;
+				}
+				break;
+			}
+			return s;
+		};
+
 		// Validate that the query is a DDL statement
-		const trimmedQuery = query.trim().toUpperCase();
+		const effective = stripLeadingComments(query);
+		const trimmedQuery = effective.trim().toUpperCase();
 		const isDDL = trimmedQuery.startsWith('CREATE') ||
 			trimmedQuery.startsWith('ALTER') ||
 			trimmedQuery.startsWith('DROP') ||
