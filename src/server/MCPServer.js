@@ -272,6 +272,9 @@ class MCPServer {
 				};
 
 				// Create a new server instance for this connection
+				// Each SSE connection requires its own Server instance since the MCP SDK
+				// binds one transport per server. This is the recommended pattern
+				// from the MCP SDK examples (simpleSseServer.js).
 				const server = new Server(
 					{
 						name: 'mssql-mcp-server',
@@ -316,6 +319,13 @@ class MCPServer {
 				return;
 			}
 
+			// Basic validation of request body
+			if (!req.body || typeof req.body !== 'object') {
+				console.error('[MCP Server] Invalid request body');
+				res.status(400).send('Invalid JSON-RPC request body');
+				return;
+			}
+
 			try {
 				await transport.handlePostMessage(req, res, req.body);
 			} catch (error) {
@@ -336,7 +346,7 @@ class MCPServer {
 		// Handle server shutdown
 		process.on('SIGINT', async () => {
 			console.error('[MCP Server] Shutting down SSE server...');
-			for (const sessionId in this.transports) {
+			for (const sessionId of Object.keys(this.transports)) {
 				try {
 					console.error(`[MCP Server] Closing transport for session ${sessionId}`);
 					await this.transports[sessionId].close();
