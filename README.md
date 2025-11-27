@@ -35,8 +35,12 @@ Add to your Claude Desktop configuration:
             "command": "node",
             "args": ["/path/to/project"],
             "env": {
-                "DB_SERVER": "localhost",
-                "DB_DATABASE": "ecommerce"
+                "DB_SERVER": "servername",
+                "DB_DATABASE": "dbname",
+                "DB_USER": "username", //optional
+                "DB_PASSWORD": "password",  //optional
+                "DB_TRUST_SERVER_CERTIFICATE": "true",  //optional
+                "DB_ENCRYPT": "true"  //optional
             }
         }
     }
@@ -70,12 +74,12 @@ Or run directly with npx:
                 "github:stilllovee/mssql-mcp-server"
             ],
             "env": {
-                "DB_SERVER": "localhost",
-                "DB_DATABASE": "x4",
-                "DB_USER": "sa",
-                "DB_PASSWORD": "YourStrong@Passw0rd",
-                "DB_TRUST_SERVER_CERTIFICATE": "true",
-                "DB_ENCRYPT": "true"
+                "DB_SERVER": "servername",
+                "DB_DATABASE": "dbname",
+                "DB_USER": "username", //optional
+                "DB_PASSWORD": "password",  //optional
+                "DB_TRUST_SERVER_CERTIFICATE": "true",  //optional
+                "DB_ENCRYPT": "true"  //optional
             }
         }
     }
