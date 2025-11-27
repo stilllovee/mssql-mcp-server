@@ -12,12 +12,6 @@ Model Context Protocol (MCP) server for Microsoft SQL Server database operations
 -   **Streamable HTTP transport** for web-based applications and remote connections
 -   Support for multiple simultaneous sessions
 
-## Installation
-
-```bash
-npm install
-```
-
 ## Usage
 
 The server supports two transport modes:
@@ -32,8 +26,34 @@ Add to your Claude Desktop configuration:
 {
     "mcpServers": {
         "mssql": {
+            "command": "npx",
+            "args": [
+                "github:stilllovee/mssql-mcp-server"
+            ],
+            "env": {
+                "DB_SERVER": "servername",
+                "DB_DATABASE": "dbname",
+                "DB_USER": "username", //optional
+                "DB_PASSWORD": "password",  //optional
+                "DB_TRUST_SERVER_CERTIFICATE": "true",  //optional
+                "DB_ENCRYPT": "true"  //optional
+            }
+        }
+    }
+}
+```
+
+Or install in your own PC
+
+```bash
+npm install
+```
+```json
+{
+    "mcpServers": {
+        "mssql": {
             "command": "node",
-            "args": ["/path/to/project"],
+            "args": ["/path/to/folder"],
             "env": {
                 "DB_SERVER": "servername",
                 "DB_DATABASE": "dbname",
@@ -54,32 +74,9 @@ Or using a connection string:
     "mcpServers": {
         "mssql": {
             "command": "node",
-            "args": ["/path/to/project"],
+            "args": ["/path/to/folder"],
             "env": {
                 "DB_CONNECTION_STRING": "Server=localhost;Database=ecommerce;Trusted_Connection=yes;TrustServerCertificate=yes"
-            }
-        }
-    }
-}
-```
-
-Or run directly with npx:
-
-```json
-{
-    "mcpServers": {
-        "mssql": {
-            "command": "npx",
-            "args": [
-                "github:stilllovee/mssql-mcp-server"
-            ],
-            "env": {
-                "DB_SERVER": "servername",
-                "DB_DATABASE": "dbname",
-                "DB_USER": "username", //optional
-                "DB_PASSWORD": "password",  //optional
-                "DB_TRUST_SERVER_CERTIFICATE": "true",  //optional
-                "DB_ENCRYPT": "true"  //optional
             }
         }
     }
