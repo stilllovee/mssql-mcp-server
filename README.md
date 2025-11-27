@@ -66,10 +66,16 @@ Or run directly with npx:
     "mcpServers": {
         "mssql": {
             "command": "npx",
-            "args": ["github:stilllovee/mssql-mcp-server"],
+            "args": [
+                "github:stilllovee/mssql-mcp-server"
+            ],
             "env": {
                 "DB_SERVER": "localhost",
-                "DB_DATABASE": "ecommerce"
+                "DB_DATABASE": "x4",
+                "DB_USER": "sa",
+                "DB_PASSWORD": "YourStrong@Passw0rd",
+                "DB_TRUST_SERVER_CERTIFICATE": "true",
+                "DB_ENCRYPT": "true"
             }
         }
     }
