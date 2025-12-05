@@ -76,7 +76,7 @@
 // }
 
 // if (isWindowsAuth) {
-// 	console.log("using windows auth driver (msnodesqlv8)");
+// 	//console.log("using windows auth driver (msnodesqlv8)");
 // 	sql = require('mssql/msnodesqlv8');
 // }
 /**
@@ -106,7 +106,7 @@ class SQLExecutor {
 			// Use provided config object
 			this.config = config;
 		} else {
-			console.log("build config from env");
+			//console.log("build config from env");
 
 			// Build config from environment variables or use defaults
 			this.config = this.buildConfigFromEnv();
@@ -233,22 +233,22 @@ class SQLExecutor {
 	 */
 	async connect() {
 		if (this.pool && this.pool.connected) {
-			console.log('[SQL Executor] Already connected to database');
+			//console.log('[SQL Executor] Already connected to database');
 			return this.pool;
 		}
 
 		// const isWindowsAuth =
 		// 	(this.config.connectionString && !this.config.connectionString.includes('User ID') && !this.config.connectionString.includes('Password'))
 		// 	|| (!this.config.user && !this.config.password);
-		// console.log("🚀 ~ SQLExecutor ~ connect ~ isWindowsAuth:", isWindowsAuth)
+		// //console.log("🚀 ~ SQLExecutor ~ connect ~ isWindowsAuth:", isWindowsAuth)
 		// if (isWindowsAuth) {
 		// 	this.sql = require('mssql/msnodesqlv8');
 		// }
 
-		console.log('[SQL Executor] Connecting to SQL Server...');
-		// console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
+		//console.log('[SQL Executor] Connecting to SQL Server...');
+		// //console.log("🚀 ~ SQLExecutor ~ connect ~ this.config:", this.config)
 		this.pool = await (new this.sql.ConnectionPool(this.config)).connect();
-		console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
+		//console.log('[SQL Executor] ✅ Connected to SQL Server successfully');
 
 		return this.pool;
 	}
@@ -257,7 +257,7 @@ class SQLExecutor {
 	 * Execute a SQL query
 	 */
 	async executeQuery(query, params = {}) {
-		console.log('[SQL Executor] Executing query:', query.substring(0, 100) + '...');
+		//console.log('[SQL Executor] Executing query:', query.substring(0, 100) + '...');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -327,7 +327,7 @@ class SQLExecutor {
 			throw new Error('DQL executor only supports SELECT queries (queries starting with SELECT or WITH for CTEs)');
 		}
 
-		console.log('[SQL Executor] Executing DQL query:', query.substring(0, 100) + '...');
+		//console.log('[SQL Executor] Executing DQL query:', query.substring(0, 100) + '...');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -410,7 +410,7 @@ class SQLExecutor {
 			throw new Error('DML executor only supports INSERT, UPDATE, DELETE, and MERGE statements');
 		}
 
-		console.log('[SQL Executor] Executing DML query:', query.substring(0, 100) + '...');
+		//console.log('[SQL Executor] Executing DML query:', query.substring(0, 100) + '...');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -484,7 +484,7 @@ class SQLExecutor {
 			throw new Error('DDL executor only supports CREATE, ALTER, DROP, TRUNCATE, RENAME, and COMMENT statements');
 		}
 
-		console.log('[SQL Executor] ⚠️  Executing DDL query:', query.substring(0, 100) + '...');
+		//console.log('[SQL Executor] ⚠️  Executing DDL query:', query.substring(0, 100) + '...');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -519,7 +519,7 @@ class SQLExecutor {
 	 * Execute a stored procedure
 	 */
 	async executeProcedure(procedureName, params = {}) {
-		console.log('[SQL Executor] Executing procedure:', procedureName);
+		//console.log('[SQL Executor] Executing procedure:', procedureName);
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -556,7 +556,7 @@ class SQLExecutor {
 	 * Get database version and connection info
 	 */
 	async getDatabaseInfo() {
-		console.log('[SQL Executor] Getting database info');
+		//console.log('[SQL Executor] Getting database info');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -586,7 +586,7 @@ class SQLExecutor {
 	 * Discover tables in the database
 	 */
 	async discoverTables(schema = null) {
-		console.log('[SQL Executor] Discovering tables', schema ? `in schema: ${schema}` : '');
+		//console.log('[SQL Executor] Discovering tables', schema ? `in schema: ${schema}` : '');
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -629,7 +629,7 @@ class SQLExecutor {
 	 * Get detailed information about a specific table
 	 */
 	async getTableInfo(tableName, schema = 'dbo') {
-		console.log(`[SQL Executor] Getting table info for ${schema}.${tableName}`);
+		//console.log(`[SQL Executor] Getting table info for ${schema}.${tableName}`);
 
 		// Ensure connection is established
 		const pool = await this.connect();
@@ -726,7 +726,7 @@ class SQLExecutor {
 			const rowCountResult = await request4.query(rowCountQuery);
 			rowCount = rowCountResult.recordset[0].ROW_COUNT;
 		} catch (err) {
-			console.log('[SQL Executor] Could not get row count:', err.message);
+			//console.log('[SQL Executor] Could not get row count:', err.message);
 		}
 
 		return {
@@ -758,7 +758,7 @@ class SQLExecutor {
 			if (this.pool) {
 				await this.pool.close();
 				this.pool = null;
-				console.log('[SQL Executor] Connection closed');
+				//console.log('[SQL Executor] Connection closed');
 			}
 		} catch (err) {
 			console.error('[SQL Executor] Error closing connection:', err.message);
