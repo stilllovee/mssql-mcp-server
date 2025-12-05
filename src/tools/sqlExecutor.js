@@ -361,8 +361,8 @@ class SQLExecutor {
 					text: JSON.stringify({
 						success: true,
 						recordCount: result.recordset ? result.recordset.length : 0,
-						columns: columns,
 						data: result.recordset || [],
+						columns: columns,
 						message: 'DQL query executed successfully'
 					}, null, 2),
 				},
