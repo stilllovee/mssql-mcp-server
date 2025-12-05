@@ -19,11 +19,23 @@ class MCPServer {
 			}
 		);
 
-		// Initialize database with optional config
-		this.sqlExecutor = new SQLExecutor(dbConfig);
+		// Store config for lazy initialization
+		this.dbConfig = dbConfig;
+		this.sqlExecutor = null;
 
 		this.setupToolHandlers();
 		this.setupErrorHandling();
+	}
+
+	/**
+	 * Lazily initialize SQLExecutor on first tool call
+	 * This prevents timeout issues during server startup
+	 */
+	async getSQLExecutor() {
+		if (!this.sqlExecutor) {
+			this.sqlExecutor = new SQLExecutor(this.dbConfig);
+		}
+		return this.sqlExecutor;
 	}
 
 	setupToolHandlers() {
@@ -38,36 +50,39 @@ class MCPServer {
 		this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			const { name, arguments: args } = request.params;
 			try {
+				// Lazy initialization of SQLExecutor on first tool call
+				const executor = await this.getSQLExecutor();
+
 				if (name === 'sql_execute_query') {
-					return await this.sqlExecutor.executeQuery(args.query, args.params || {});
+					return await executor.executeQuery(args.query, args.params || {});
 				}
 
 				if (name === 'sql_execute_dql') {
-					return await this.sqlExecutor.executeDQL(args.query, args.params || {});
+					return await executor.executeDQL(args.query, args.params || {});
 				}
 
 				if (name === 'sql_execute_dml') {
-					return await this.sqlExecutor.executeDML(args.query, args.params || {});
+					return await executor.executeDML(args.query, args.params || {});
 				}
 
 				if (name === 'sql_execute_ddl') {
-					return await this.sqlExecutor.executeDDL(args.query, args.params || {});
+					return await executor.executeDDL(args.query, args.params || {});
 				}
 
 				if (name === 'sql_execute_procedure') {
-					return await this.sqlExecutor.executeProcedure(args.procedure_name, args.params || {});
+					return await executor.executeProcedure(args.procedure_name, args.params || {});
 				}
 
 				if (name === 'sql_get_database_info') {
-					return await this.sqlExecutor.getDatabaseInfo();
+					return await executor.getDatabaseInfo();
 				}
 
 				if (name === 'sql_discover_tables') {
-					return await this.sqlExecutor.discoverTables(args.schema || null);
+					return await executor.discoverTables(args.schema || null);
 				}
 
 				if (name === 'sql_get_table_info') {
-					return await this.sqlExecutor.getTableInfo(args.table_name, args.schema || 'dbo');
+					return await executor.getTableInfo(args.table_name, args.schema || 'dbo');
 				}
 			} catch (error) {
 				console.error(`[MCP Server] Error executing tool ${name}:`, error);
