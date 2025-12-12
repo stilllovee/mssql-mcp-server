@@ -363,7 +363,7 @@ class SQLExecutor {
 						recordCount: result.recordset ? result.recordset.length : 0,
 						data: result.recordset || [],
 						// columns: columns,
-						message: 'DQL query executed successfully'
+						// message: 'DQL query executed successfully'
 					}, null, 2),
 				},
 			],
@@ -618,7 +618,7 @@ class SQLExecutor {
 						// success: true,
 						tableCount: result.recordset.length,
 						tables: result.recordset,
-						message: 'Tables discovered successfully'
+						// message: 'Tables discovered successfully'
 					}, null, 2),
 				},
 			],
@@ -743,7 +743,7 @@ class SQLExecutor {
 							indexes: indexesResult.recordset,
 							foreignKeys: foreignKeysResult.recordset
 						},
-						message: 'Table information retrieved successfully'
+						// message: 'Table information retrieved successfully'
 					}, null, 2),
 				},
 			],
