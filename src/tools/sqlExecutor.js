@@ -278,7 +278,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						rowsAffected: result.rowsAffected,
 						recordCount: result.recordset ? result.recordset.length : 0,
 						data: result.recordset || [],
@@ -359,10 +359,10 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						recordCount: result.recordset ? result.recordset.length : 0,
 						data: result.recordset || [],
-						columns: columns,
+						// columns: columns,
 						message: 'DQL query executed successfully'
 					}, null, 2),
 				},
@@ -431,7 +431,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						rowsAffected: result.rowsAffected,
 						totalRowsAffected: result.rowsAffected.reduce((sum, count) => sum + count, 0),
 						recordset: result.recordset || [],
@@ -505,7 +505,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						rowsAffected: result.rowsAffected,
 						message: 'DDL statement executed successfully',
 						warning: 'DDL operations have modified the database structure'
@@ -540,7 +540,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						rowsAffected: result.rowsAffected,
 						recordCount: result.recordset ? result.recordset.length : 0,
 						data: result.recordset || [],
@@ -574,7 +574,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						info: result.recordset[0]
 					}, null, 2),
 				},
@@ -615,7 +615,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						tableCount: result.recordset.length,
 						tables: result.recordset,
 						message: 'Tables discovered successfully'
@@ -734,7 +734,7 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						success: true,
+						// success: true,
 						table: {
 							schema: schema,
 							name: tableName,
