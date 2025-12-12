@@ -573,10 +573,7 @@ class SQLExecutor {
 			content: [
 				{
 					type: 'text',
-					text: JSON.stringify({
-						// success: true,
-						info: result.recordset[0]
-					}, null, 2),
+					text: JSON.stringify(result.recordset[0], null, 2),
 				},
 			],
 		};
@@ -734,16 +731,12 @@ class SQLExecutor {
 				{
 					type: 'text',
 					text: JSON.stringify({
-						// success: true,
-						table: {
-							schema: schema,
-							name: tableName,
-							rowCount: rowCount,
-							columns: columnsResult.recordset,
-							indexes: indexesResult.recordset,
-							foreignKeys: foreignKeysResult.recordset
-						},
-						// message: 'Table information retrieved successfully'
+						schema: schema,
+						name: tableName,
+						rowCount: rowCount,
+						columns: columnsResult.recordset,
+						indexes: indexesResult.recordset,
+						foreignKeys: foreignKeysResult.recordset
 					}, null, 2),
 				},
 			],
